@@ -1,0 +1,43 @@
+#!/bin/bash
+DOWNLOAD=$1
+PROGRAM=$2
+SUCCESS=0
+if [ $DOWNLOAD = "-S" ]; then
+  wget -q https://aur.archlinux.org/cgit/aur.git/snapshot/$PROGRAM.tar.gz && SUCCESS=1 || SUCCESS=0
+  if [ $SUCCESS -eq 1 ]; then
+    mv $PROGRAM.tar.gz ~/Documents/Programs/
+    cd ~/Documents/Programs/
+    tar -xf ~/Documents/Programs/$PROGRAM.tar.gz
+    cd $PROGRAM
+    makepkg -si
+    cd ..
+    rm $PROGRAM.tar.gz
+    rm -r $PROGRAM
+  else
+    echo Package not found.
+  fi
+elif [ $DOWNLOAD = "-U" ]; then
+  mkdir -p /tmp/aurctl
+  getupdates 
+  UPDATE=$(cat /tmp/aurctl/updatable)
+  if [ "$UPDATE" = "" ]; then
+    echo All packages are up to date.
+  else
+    echo Updatable packages:
+    echo $UPDATE | tr ' ' '\n'
+    echo Start update? [y/n]
+    read
+    if [ "$REPLY" = "y" ]
+    then
+      for i in $UPDATE
+      do
+        aurctl -S $i
+      done
+    else
+      echo No packages updated.
+    fi
+  fi
+  rm -r /tmp/aurctl
+else
+  echo Unknown parameter.
+fi

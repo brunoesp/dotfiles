@@ -1,0 +1,11 @@
+#!/bin/sh
+
+booksdir="/media/data/Documents/CS Books/Unique"
+
+books=$(ls -R "$booksdir" | grep -E "\.epub$|\.mobi$|\.pdf$" | sort -n | uniq)
+[ "$books" = "" ] && exit 1
+select=$(echo "$books" | rofi -dmenu -i -p "Select file")
+[ "$select" = "" ] && exit 1
+fullpath=$(find "$booksdir" -name "$select" -print | head -n 1)
+[ "$fullpath" = "" ] && exit 1
+zathura "$fullpath"

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+page=$(rofi -l 1 -dmenu -i -p "Man page to open")
+
+man -t $page | ps2pdf - - | zathura -
