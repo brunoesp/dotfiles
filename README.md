@@ -1,3 +1,3 @@
 # dotfiles
 Current Linux dotfiles
-![alt dotfiles picture](https://imgur.com/a/Lu2opLI)
+![alt dotfiles picture](https://i.imgur.com/GDsj7Bq.png)
