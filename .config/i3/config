@@ -22,9 +22,6 @@ bindsym Mod1+f exec --no-startup-id polybar-msg cmd toggle
 # login
 
 exec --no-startup-id setxkbmap br
-exec --no-startup-id xinput set-prop 'Logitech G502 HERO Gaming Mouse' 'libinput Accel Speed' 0.0
-exec --no-startup-id xinput set-prop 'Logitech G502 HERO Gaming Mouse' 'libinput Accel Profile Enabled' 0 1
-
 
 # polybar
 
@@ -33,10 +30,6 @@ exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 # picom
 
 exec --no-startup-id picom -b
-
-# mpd
-
-#exec --no-startup-id mpd
 
 # notification
 
@@ -48,7 +41,7 @@ exec --no-startup-id /usr/lib/mate-polkit/polkit-mate-authentication-agent-1
 
 # wallpaper
 
-exec --no-startup-id feh --bg-scale $HOME/Images/plasma.jpg
+exec --no-startup-id feh --bg-scale $HOME/Images/Wallpapers/plasma.jpg
 
 # pulseaudio
 
@@ -77,14 +70,6 @@ bindsym Ctrl+q exec --no-startup-id "mpc prev"
 bindsym Ctrl+w exec --no-startup-id "mpc next"
 bindsym Ctrl+e exec --no-startup-id "mpc toggle"
 bindsym Ctrl+Shift+e exec --no-startup-id "mpc stop"
-
-# brightness
-
-bindsym XF86MonBrightnessUp exec --no-startup-id brightctl inc 10
-bindsym XF86MonBrightnessDown exec --no-startup-id brightctl dec 10
-bindsym Shift+XF86MonBrightnessUp exec --no-startup-id brightctl set 100
-bindsym Shift+XF86MonBrightnessDown exec --no-startup-id brightctl set 1
-bindsym Ctrl+Shift+XF86MonBrightnessUp exec --no-startup-id brightctl set $(rofi -dmenu -lines 1 -width 20 -p "Brightness Value")
 
 # print
 
