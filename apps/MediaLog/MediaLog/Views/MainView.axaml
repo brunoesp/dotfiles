@@ -1,0 +1,220 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MediaLog.ViewModels"
+             xmlns:m="using:MediaLog.Models"
+             xmlns:c="using:MediaLog.Controls"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="MediaLog.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Background="{DynamicResource AppBackground}">
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <UserControl.DataTemplates>
+        <!-- Media type: colored icon + label (used by the type picker) -->
+        <DataTemplate DataType="m:MediaTypeInfo">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <c:StrokeIcon Data="{Binding Icon}" Foreground="{Binding Brush}" Width="18" Height="18" />
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <Grid RowDefinitions="*,Auto">
+        <SplitView x:Name="Split"
+                   IsPaneOpen="{Binding IsPaneOpen, Mode=TwoWay}"
+                   DisplayMode="Inline"
+                   OpenPaneLength="260"
+                   CompactPaneLength="0"
+                   PaneBackground="{DynamicResource PaneBackground}">
+
+            <!-- ============ Navigation pane ============ -->
+            <SplitView.Pane>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="20,20,20,12" Spacing="2">
+                        <TextBlock Text="MediaLog" FontSize="22" FontWeight="Bold" />
+                        <TextBlock Classes="subtle" Text="Everything you've finished" FontSize="12" />
+                    </StackPanel>
+
+                    <Border DockPanel.Dock="Bottom" Padding="16,12" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBox Text="{Binding NewListName}" PlaceholderText="New list…">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding AddListCommand}" />
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <Button Grid.Column="1" Command="{Binding AddListCommand}" ToolTip.Tip="Create list" Padding="9">
+                                <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" Width="16" Height="16" />
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <ListBox x:Name="Nav" Classes="nav"
+                             ItemsSource="{Binding NavItems}"
+                             SelectedItem="{Binding SelectedNav}"
+                             SelectionMode="AlwaysSelected">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:ListViewModel">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <c:StrokeIcon Data="{Binding Icon}" Width="18" Height="18"
+                                                  Foreground="{DynamicResource SubtleText}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               FontWeight="{Binding IsMaster, Converter={x:Static vm:Converters.BoolToSemiBold}}" />
+                                    <Border Grid.Column="2" Background="{DynamicResource CardBorder}" CornerRadius="10" Padding="8,1" MinWidth="26">
+                                        <TextBlock Text="{Binding Count}" FontSize="12" HorizontalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </SplitView.Pane>
+
+            <!-- ============ Content ============ -->
+            <Grid RowDefinitions="Auto,*">
+                <!-- Header -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,4">
+                    <Button x:Name="PaneToggle" Classes="icon" Command="{Binding TogglePaneCommand}" Margin="0,0,6,0" IsVisible="False">
+                        <c:StrokeIcon Data="{x:Static c:Icons.Menu}" Width="22" Height="22" />
+                    </Button>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBox Classes="title" Text="{Binding SelectedNav.Name, FallbackValue=''}"
+                                 IsVisible="{Binding IsUserListSelected}" ToolTip.Tip="Click to rename" />
+                        <TextBlock Text="All media" FontSize="24" FontWeight="SemiBold" Margin="5,2"
+                                   IsVisible="{Binding IsMasterSelected}" />
+                        <TextBlock Classes="subtle" Margin="5,0" Text="{Binding CountText}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                                IsVisible="{Binding IsUserListSelected}">
+                        <Button Classes="icon danger" Command="{Binding RequestDeleteListCommand}" ToolTip.Tip="Delete list"
+                                IsVisible="{Binding !IsConfirmingDelete}">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
+                        </Button>
+                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsConfirmingDelete}">
+                            <TextBlock Text="Delete list and its entries?" VerticalAlignment="Center" Classes="subtle" />
+                            <Button Content="Delete" Command="{Binding ConfirmDeleteListCommand}" Background="#E53935" Foreground="White" />
+                            <Button Content="Cancel" Command="{Binding CancelDeleteListCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel>
+                        <!-- Per-type, color coded counters (click to filter) -->
+                        <ItemsControl ItemsSource="{Binding Stats}" Margin="20,8,16,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:TypeStatViewModel">
+                                    <Button Classes="chip" Command="{Binding ToggleCommand}" ToolTip.Tip="Filter by type">
+                                        <Border Classes="chip" Background="{Binding Type.SoftBrush}"
+                                                BorderBrush="{Binding BorderBrush}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.Brush}" Width="16" Height="16" />
+                                                <TextBlock Text="{Binding Type.Label}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Count}" FontWeight="Bold" VerticalAlignment="Center"
+                                                           Foreground="{Binding Type.Brush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Add entry form -->
+                        <Border Classes="card" Margin="16,4,16,8" Padding="14">
+                            <StackPanel Spacing="10">
+                                <TextBox Text="{Binding NewName}" PlaceholderText="What did you finish? (title)">
+                                    <TextBox.KeyBindings>
+                                        <KeyBinding Gesture="Enter" Command="{Binding AddEntryCommand}" />
+                                    </TextBox.KeyBindings>
+                                </TextBox>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding NewType}" MinWidth="160" />
+                                    <CalendarDatePicker SelectedDate="{Binding NewDate}" MinWidth="150" ToolTip.Tip="Date completed" />
+                                    <ComboBox ItemsSource="{Binding UserLists}" SelectedItem="{Binding TargetList}" MinWidth="140"
+                                              IsVisible="{Binding IsMasterSelected}" PlaceholderText="Add to list"
+                                              ToolTip.Tip="List to add to" />
+                                    <Button Command="{Binding AddEntryCommand}" Classes="accent">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="White" Width="16" Height="16" />
+                                            <TextBlock Text="Add" Foreground="White" />
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Search -->
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="16,0,16,8">
+                            <TextBox Text="{Binding SearchText}" PlaceholderText="Search…">
+                                <TextBox.InnerLeftContent>
+                                    <c:StrokeIcon Data="{x:Static c:Icons.Search}" Width="16" Height="16" Margin="10,0,0,0"
+                                                  Foreground="{DynamicResource SubtleText}" />
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                            <Button Grid.Column="1" Content="Clear filters" Command="{Binding ClearFiltersCommand}"
+                                    IsVisible="{Binding IsFiltered}" />
+                        </Grid>
+
+                        <!-- Entries -->
+                        <ItemsControl ItemsSource="{Binding Entries}" Margin="16,0,16,16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:EntryViewModel">
+                                    <Border Classes="card" Margin="0,0,0,8" ClipToBounds="True">
+                                        <Grid ColumnDefinitions="5,Auto,*,Auto">
+                                            <!-- color stripe -->
+                                            <Border Background="{Binding Type.Brush}" />
+                                            <Border Grid.Column="1" Width="42" Height="42" CornerRadius="21" Margin="12,10"
+                                                    Background="{Binding Type.SoftBrush}">
+                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.Brush}" Width="22" Height="22" />
+                                            </Border>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2" Margin="0,8">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                                                <WrapPanel ItemSpacing="6">
+                                                    <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
+                                                    <TextBlock Classes="subtle" Text="·" FontSize="12" />
+                                                    <TextBlock Classes="subtle" Text="{Binding DateText}" FontSize="12" />
+                                                    <TextBlock Classes="subtle" Text="·" FontSize="12" IsVisible="{Binding ShowList}" />
+                                                    <TextBlock Classes="subtle" Text="{Binding List.Name}" FontSize="12" IsVisible="{Binding ShowList}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                            <Button Grid.Column="3" Classes="icon danger" Margin="4,0,8,0"
+                                                    Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                                                <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="subtle" Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}"
+                                   HorizontalAlignment="Center" Margin="24,16" TextWrapping="Wrap" TextAlignment="Center" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </SplitView>
+
+        <!-- Undo bar -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}"
+                BorderThickness="0,1,0,0" Padding="16,8"
+                IsVisible="{Binding UndoText, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Text="{Binding UndoText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Button Grid.Column="1" Content="Undo" Command="{Binding UndoCommand}" />
+                <Button Grid.Column="2" Classes="icon" Command="{Binding DismissUndoCommand}">
+                    <c:StrokeIcon Data="{x:Static c:Icons.Close}" />
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

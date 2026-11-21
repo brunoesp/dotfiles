@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="MediaLog/MediaLog.csproj" />
+  <Project Path="MediaLog.Desktop/MediaLog.Desktop.csproj" />
+  <Project Path="MediaLog.Android/MediaLog.Android.csproj">
+    <Deploy />
+  </Project>
+</Solution>

@@ -1,0 +1,115 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:MediaLog.Controls"
+             x:Class="MediaLog.App"
+             Name="MediaLog"
+             RequestedThemeVariant="Default">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppBackground" Color="#F4F5F8" />
+                    <SolidColorBrush x:Key="PaneBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CardBorder" Color="#E2E4EA" />
+                    <SolidColorBrush x:Key="SubtleText" Color="#6B7080" />
+                    <SolidColorBrush x:Key="NavSelected" Color="#E8ECF8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppBackground" Color="#16171C" />
+                    <SolidColorBrush x:Key="PaneBackground" Color="#1E2027" />
+                    <SolidColorBrush x:Key="CardBackground" Color="#23252D" />
+                    <SolidColorBrush x:Key="CardBorder" Color="#30333D" />
+                    <SolidColorBrush x:Key="SubtleText" Color="#9A9FAE" />
+                    <SolidColorBrush x:Key="NavSelected" Color="#2C3142" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+
+        <Style Selector="TextBlock.subtle">
+            <Setter Property="Foreground" Value="{DynamicResource SubtleText}" />
+        </Style>
+
+        <!-- Flat icon-only buttons -->
+        <Style Selector="Button.icon">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.icon c|StrokeIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SubtleText}" />
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+        </Style>
+        <Style Selector="Button.icon:pointerover c|StrokeIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+        <Style Selector="Button.danger:pointerover c|StrokeIcon">
+            <Setter Property="Foreground" Value="#E53935" />
+        </Style>
+
+        <!-- Sidebar list -->
+        <Style Selector="ListBox.nav">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.nav ListBoxItem">
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="8,2" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="ListBox.nav ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelected}" />
+        </Style>
+        <Style Selector="ListBox.nav ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelected}" />
+        </Style>
+
+        <!-- Name of a user list, editable in place -->
+        <Style Selector="TextBox.title">
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="TextBox.title:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+        </Style>
+        <Style Selector="TextBox.title:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+        </Style>
+
+        <!-- Type count chips: the inner border carries the type color -->
+        <Style Selector="Button.chip">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+        <Style Selector="Button.chip:pointerover">
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+        <Style Selector="Button.chip Border.chip">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+    </Application.Styles>
+</Application>
