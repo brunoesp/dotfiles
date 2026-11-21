@@ -8,6 +8,10 @@ public sealed class MediaList
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
+
+    /// <summary>Set for the automatic per-year lists; <c>null</c> for user-created lists.</summary>
+    public int? Year { get; set; }
+
     public List<MediaEntry> Entries { get; set; } = [];
 }
 

@@ -29,7 +29,13 @@ public partial class ListViewModel : ViewModelBase
 
     public bool IsMaster => Model is null;
 
-    public Geometry Icon => IsMaster ? Icons.Layers : Icons.List;
+    /// <summary>Automatic list for a calendar year (name is fixed to the year).</summary>
+    public bool IsYearList => Model?.Year is not null;
+
+    /// <summary>User lists can be renamed; the master and year lists can't.</summary>
+    public bool CanRename => !IsMaster && !IsYearList;
+
+    public Geometry Icon => IsMaster ? Icons.Layers : IsYearList ? Icons.Calendar : Icons.List;
 
     [ObservableProperty]
     public partial int Count { get; set; }
@@ -41,7 +47,7 @@ public partial class ListViewModel : ViewModelBase
         get => _name;
         set
         {
-            if (IsMaster || value == _name)
+            if (!CanRename || value == _name)
                 return;
             // Keep the previous name if the user clears the field entirely.
             var trimmed = value.Trim();

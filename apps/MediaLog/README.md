@@ -10,8 +10,11 @@ documentaries, audiobooks…
 
 ## Features
 
-- **Lists** – create as many lists as you like (e.g. "2026", "Favourites"); rename by clicking the title, delete from the header.
-- **Entries** – name, type, date completed; each type has its own **color** and **icon**.
+- **Year lists** – a list for the current year (e.g. "2026") is created automatically and is the default.
+  Past years' lists are kept; on New Year a fresh list for the new year is created (even while the app is open).
+- **Custom lists** – create as many extra lists as you like (e.g. "Favourites"); rename by clicking the title, delete from the header.
+- **Entries** – added from a one-line bar: type · title · date · big **+** button (or press Enter).
+  Each type has its own vivid **color** and **icon**.
 - **All media (master list)** – every entry from every list, with the **total count** and a color‑coded counter per type.
 - Click a type chip to filter by it; search by title; entries sorted by completion date (newest first).
 - Undo for deleted entries.

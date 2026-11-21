@@ -36,6 +36,13 @@ public partial class MainView : UserControl
 
         Split.DisplayMode = compact ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
         PaneToggle.IsVisible = compact;
+        Classes.Set("compact", compact);
+
+        // Date / list pickers share the add bar's line on wide screens, and get their own row on phones.
+        MetaWide.Child = null;
+        MetaCompact.Child = null;
+        (compact ? MetaCompact : MetaWide).Child = Meta;
+        MetaCompact.IsVisible = compact;
         if (DataContext is MainViewModel vm)
             vm.IsPaneOpen = !compact;
         else

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaLog.Models;
@@ -36,7 +37,50 @@ public partial class MainViewModel : ViewModelBase
 
         NewType = Types[0];
         NewDate = DateTime.Today;
-        SelectedNav = NavItems.Count > 1 ? NavItems[1] : Master;
+        SelectedNav = EnsureCurrentYearList();
+
+        // Roll over to a new year list if the app is left open across New Year.
+        if (store is not null)
+        {
+            _yearTimer = new DispatcherTimer(TimeSpan.FromMinutes(5), DispatcherPriority.Background, (_, _) => CheckYear());
+            _yearTimer.Start();
+        }
+    }
+
+    private readonly DispatcherTimer? _yearTimer;
+
+    /// <summary>The automatic list for the current calendar year.</summary>
+    public ListViewModel? CurrentYearList => UserLists.FirstOrDefault(l => l.Model!.Year == DateTime.Today.Year);
+
+    /// <summary>
+    /// Makes sure a list for the current year exists (previous years' lists are kept).
+    /// </summary>
+    private ListViewModel EnsureCurrentYearList()
+    {
+        if (CurrentYearList is { } existing)
+            return existing;
+
+        var year = DateTime.Today.Year;
+        var list = new MediaList { Name = year.ToString(System.Globalization.CultureInfo.InvariantCulture), Year = year };
+        _library.Lists.Add(list);
+        var vm = AddListViewModel(list);
+        Persist();
+        return vm;
+    }
+
+    private void CheckYear()
+    {
+        if (CurrentYearList is not null)
+            return;
+        var previous = UserLists.Where(l => l.IsYearList).MaxBy(l => l.Model!.Year);
+        var created = EnsureCurrentYearList();
+        // Follow the rollover if the user was looking at last year's list.
+        if (SelectedNav == previous || SelectedNav is null)
+            SelectedNav = created;
+        else
+            Refresh();
+        if (NewDate is { } d && d.Year < created.Model!.Year)
+            NewDate = DateTime.Today;
     }
 
     public IReadOnlyList<MediaTypeInfo> Types => MediaTypeInfo.All;
@@ -54,12 +98,19 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<TypeStatViewModel> Stats { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMasterSelected), nameof(IsUserListSelected))]
+    [NotifyPropertyChangedFor(nameof(IsMasterSelected), nameof(IsUserListSelected),
+        nameof(IsRenamableSelected), nameof(CanDeleteSelected))]
     [NotifyCanExecuteChangedFor(nameof(AddEntryCommand))]
     public partial ListViewModel? SelectedNav { get; set; }
 
     public bool IsMasterSelected => SelectedNav?.IsMaster == true;
     public bool IsUserListSelected => SelectedNav is { IsMaster: false };
+
+    /// <summary>Selected list can be renamed in place (custom lists only).</summary>
+    public bool IsRenamableSelected => SelectedNav?.CanRename == true;
+
+    /// <summary>Everything but the master list and the current year's list can be deleted.</summary>
+    public bool CanDeleteSelected => SelectedNav is { IsMaster: false } s && s != CurrentYearList;
 
     /// <summary>Total number of entries in the selected scope (before search / type filter).</summary>
     [ObservableProperty]
@@ -123,7 +174,7 @@ public partial class MainViewModel : ViewModelBase
         if (value is { IsMaster: false })
             TargetList = value;
         else if (TargetList is null || !UserLists.Contains(TargetList))
-            TargetList = UserLists.FirstOrDefault();
+            TargetList = CurrentYearList ?? UserLists.FirstOrDefault();
         Refresh();
     }
 
@@ -211,7 +262,7 @@ public partial class MainViewModel : ViewModelBase
     private void ConfirmDeleteList()
     {
         IsConfirmingDelete = false;
-        if (SelectedNav?.Model is not { } model)
+        if (!CanDeleteSelected || SelectedNav?.Model is not { } model)
             return;
 
         var vm = SelectedNav;
@@ -220,7 +271,7 @@ public partial class MainViewModel : ViewModelBase
         UserLists.Remove(vm);
         NavItems.Remove(vm);
         if (TargetList == vm)
-            TargetList = UserLists.FirstOrDefault();
+            TargetList = CurrentYearList ?? UserLists.FirstOrDefault();
         if (_lastDeleted?.List == vm)
             DismissUndo();
         Persist();
@@ -240,12 +291,25 @@ public partial class MainViewModel : ViewModelBase
     private void ToggleType(TypeStatViewModel stat) =>
         TypeFilter = TypeFilter == stat.Type.Kind ? null : stat.Type.Kind;
 
+    /// <summary>
+    /// Adds a list to the sidebar, keeping year lists (newest first) above custom lists.
+    /// </summary>
     private ListViewModel AddListViewModel(MediaList list)
     {
         var vm = ListViewModel.ForList(list, OnListRenamed);
-        UserLists.Add(vm);
-        NavItems.Add(vm);
         vm.Count = list.Entries.Count;
+
+        int index;
+        if (list.Year is { } year)
+        {
+            index = UserLists.TakeWhile(l => l.Model!.Year is { } y && y > year).Count();
+        }
+        else
+        {
+            index = UserLists.Count;
+        }
+        UserLists.Insert(index, vm);
+        NavItems.Insert(index + 1, vm); // + 1 for the master list
         return vm;
     }
 

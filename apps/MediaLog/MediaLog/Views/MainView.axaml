@@ -5,6 +5,7 @@
              xmlns:vm="using:MediaLog.ViewModels"
              xmlns:m="using:MediaLog.Models"
              xmlns:c="using:MediaLog.Controls"
+             xmlns:views="using:MediaLog.Views"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
              x:Class="MediaLog.Views.MainView"
              x:DataType="vm:MainViewModel"
@@ -22,6 +23,16 @@
             </StackPanel>
         </DataTemplate>
     </UserControl.DataTemplates>
+
+    <UserControl.Styles>
+        <!-- Phones: date / list move to a second row of the add bar (see code-behind), type shows icon only -->
+        <Style Selector="views|MainView.compact StackPanel#Meta > Border.sep">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="views|MainView.compact TextBlock.typeLabel">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+    </UserControl.Styles>
 
     <Grid RowDefinitions="*,Auto">
         <SplitView x:Name="Split"
@@ -84,14 +95,14 @@
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBox Classes="title" Text="{Binding SelectedNav.Name, FallbackValue=''}"
-                                 IsVisible="{Binding IsUserListSelected}" ToolTip.Tip="Click to rename" />
-                        <TextBlock Text="All media" FontSize="24" FontWeight="SemiBold" Margin="5,2"
-                                   IsVisible="{Binding IsMasterSelected}" />
+                                 IsVisible="{Binding IsRenamableSelected}" ToolTip.Tip="Click to rename" />
+                        <TextBlock Text="{Binding SelectedNav.Name, FallbackValue=''}" FontSize="24" FontWeight="SemiBold" Margin="5,2"
+                                   IsVisible="{Binding !IsRenamableSelected}" />
                         <TextBlock Classes="subtle" Margin="5,0" Text="{Binding CountText}" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                                IsVisible="{Binding IsUserListSelected}">
+                                IsVisible="{Binding CanDeleteSelected}">
                         <Button Classes="icon danger" Command="{Binding RequestDeleteListCommand}" ToolTip.Tip="Delete list"
                                 IsVisible="{Binding !IsConfirmingDelete}">
                             <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
@@ -130,27 +141,48 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- Add entry form -->
-                        <Border Classes="card" Margin="16,4,16,8" Padding="14">
-                            <StackPanel Spacing="10">
-                                <TextBox Text="{Binding NewName}" PlaceholderText="What did you finish? (title)">
-                                    <TextBox.KeyBindings>
-                                        <KeyBinding Gesture="Enter" Command="{Binding AddEntryCommand}" />
-                                    </TextBox.KeyBindings>
-                                </TextBox>
-                                <WrapPanel ItemSpacing="8" LineSpacing="8">
-                                    <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding NewType}" MinWidth="160" />
-                                    <CalendarDatePicker SelectedDate="{Binding NewDate}" MinWidth="150" ToolTip.Tip="Date completed" />
-                                    <ComboBox ItemsSource="{Binding UserLists}" SelectedItem="{Binding TargetList}" MinWidth="140"
-                                              IsVisible="{Binding IsMasterSelected}" PlaceholderText="Add to list"
-                                              ToolTip.Tip="List to add to" />
-                                    <Button Command="{Binding AddEntryCommand}" Classes="accent">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="White" Width="16" Height="16" />
-                                            <TextBlock Text="Add" Foreground="White" />
+                        <!-- Add entry bar: type · title · date · (list) · + -->
+                        <Border Classes="composer" Margin="16,6,16,14">
+                            <StackPanel>
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <ComboBox Classes="typePicker" ItemsSource="{Binding Types}" SelectedItem="{Binding NewType}"
+                                              Background="{Binding NewType.Brush}" ToolTip.Tip="Type">
+                                        <ComboBox.SelectionBoxItemTemplate>
+                                            <DataTemplate DataType="m:MediaTypeInfo">
+                                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                                    <c:StrokeIcon Data="{Binding Icon}" Foreground="{Binding OnBrush}" Width="18" Height="18" StrokeThickness="2.2" />
+                                                    <TextBlock Classes="typeLabel" Text="{Binding Label}" Foreground="{Binding OnBrush}"
+                                                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.SelectionBoxItemTemplate>
+                                    </ComboBox>
+
+                                    <TextBox Grid.Column="1" Classes="bare" Text="{Binding NewName}"
+                                             PlaceholderText="What did you finish?" VerticalAlignment="Center">
+                                        <TextBox.KeyBindings>
+                                            <KeyBinding Gesture="Enter" Command="{Binding AddEntryCommand}" />
+                                        </TextBox.KeyBindings>
+                                    </TextBox>
+
+                                    <Border x:Name="MetaWide" Grid.Column="2">
+                                        <StackPanel x:Name="Meta" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <Border Classes="sep" />
+                                            <CalendarDatePicker Classes="bare" SelectedDate="{Binding NewDate}" Width="132"
+                                                                SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy"
+                                                                ToolTip.Tip="Date completed" />
+                                            <Border Classes="sep" IsVisible="{Binding IsMasterSelected}" />
+                                            <ComboBox Classes="bare" ItemsSource="{Binding UserLists}" SelectedItem="{Binding TargetList}"
+                                                      IsVisible="{Binding IsMasterSelected}" PlaceholderText="List"
+                                                      ToolTip.Tip="Add to list" MinWidth="96" />
                                         </StackPanel>
+                                    </Border>
+
+                                    <Button Grid.Column="3" Classes="add" Command="{Binding AddEntryCommand}" ToolTip.Tip="Add (Enter)">
+                                        <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="White" Width="26" Height="26" StrokeThickness="2.6" />
                                     </Button>
-                                </WrapPanel>
+                                </Grid>
+                                <Border x:Name="MetaCompact" Margin="8,2,0,0" />
                             </StackPanel>
                         </Border>
 
@@ -170,16 +202,16 @@
                         <ItemsControl ItemsSource="{Binding Entries}" Margin="16,0,16,16">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:EntryViewModel">
-                                    <Border Classes="card" Margin="0,0,0,8" ClipToBounds="True">
-                                        <Grid ColumnDefinitions="5,Auto,*,Auto">
+                                    <Border Classes="card" Margin="0,0,0,6" ClipToBounds="True">
+                                        <Grid ColumnDefinitions="4,Auto,*,Auto">
                                             <!-- color stripe -->
                                             <Border Background="{Binding Type.Brush}" />
-                                            <Border Grid.Column="1" Width="42" Height="42" CornerRadius="21" Margin="12,10"
-                                                    Background="{Binding Type.SoftBrush}">
-                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.Brush}" Width="22" Height="22" />
+                                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="17" Margin="10,7"
+                                                    Background="{Binding Type.Brush}">
+                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18" StrokeThickness="2.2" />
                                             </Border>
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2" Margin="0,8">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1" Margin="0,6">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
                                                 <WrapPanel ItemSpacing="6">
                                                     <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
                                                     <TextBlock Classes="subtle" Text="·" FontSize="12" />

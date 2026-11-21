@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="using:MediaLog.Controls"
+             xmlns:m="using:MediaLog.Models"
              x:Class="MediaLog.App"
              Name="MediaLog"
              RequestedThemeVariant="Default">
@@ -60,6 +61,82 @@
         </Style>
         <Style Selector="Button.danger:pointerover c|StrokeIcon">
             <Setter Property="Foreground" Value="#E53935" />
+        </Style>
+
+        <!-- Add bar -->
+        <Style Selector="Border.composer">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="30" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="BoxShadow" Value="0 6 24 0 #1F000000" />
+        </Style>
+        <Style Selector="Border.sep">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Background" Value="{DynamicResource CardBorder}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ComboBox.typePicker">
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Padding" Value="16,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="ComboBox.typePicker /template/ PathIcon#DropDownGlyph">
+            <Setter Property="Foreground" Value="{Binding $parent[ComboBox].((m:MediaTypeInfo)SelectedItem).OnBrush, FallbackValue=White}" />
+        </Style>
+        <Style Selector="ComboBox.typePicker:pointerover /template/ Border#Background, ComboBox.typePicker:pressed /template/ Border#Background, ComboBox.typePicker:focus-visible /template/ Border#Background">
+            <Setter Property="Background" Value="{Binding $parent[ComboBox].Background}" />
+            <Setter Property="Opacity" Value="0.88" />
+        </Style>
+
+        <!-- Borderless inputs inside the add bar -->
+        <Style Selector="TextBox.bare, CalendarDatePicker.bare, ComboBox.bare">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="TextBox.bare /template/ Border#PART_BorderElement, TextBox.bare:pointerover /template/ Border#PART_BorderElement, TextBox.bare:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="CalendarDatePicker.bare TextBox /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="CalendarDatePicker.bare /template/ Border#Background, CalendarDatePicker.bare:pointerover /template/ Border#Background">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ComboBox.bare /template/ Border#Background, ComboBox.bare:pointerover /template/ Border#Background">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="Button.add">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="#3D5AFE" />
+        </Style>
+        <Style Selector="Button.add:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#536DFE" />
+        </Style>
+        <Style Selector="Button.add:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#304FFE" />
+        </Style>
+        <Style Selector="Button.add:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3D5AFE" />
+        </Style>
+        <Style Selector="Button.add:disabled">
+            <Setter Property="Opacity" Value="0.45" />
         </Style>
 
         <!-- Sidebar list -->

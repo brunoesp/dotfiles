@@ -93,7 +93,8 @@ public sealed class LibraryStore
                 _storage.Backup(json);
         }
 
-        return new Library { Lists = [new MediaList { Name = "My List" }] };
+        // The current year's list is created by the view model.
+        return new Library();
     }
 
     public void Save(Library library) =>
