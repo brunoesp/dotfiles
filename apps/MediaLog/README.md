@@ -1,6 +1,6 @@
 # MediaLog
 
-A small cross‑platform app (Windows, Linux, Android) built with **Avalonia 12** and **.NET 10** to keep
+A small cross‑platform app (Windows, Linux, Android, iOS and the browser) built with **Avalonia 12** and **.NET 10** to keep
 lists of the media you've finished — movies, series, books, games, comics, anime, albums, podcasts,
 documentaries, audiobooks…
 
@@ -18,7 +18,7 @@ documentaries, audiobooks…
 - Responsive: sidebar on wide screens, hamburger/overlay menu on phones. Follows the system light/dark theme.
 - Data is saved automatically as JSON in the per‑user app data folder
   (`%LOCALAPPDATA%\MediaLog\library.json` on Windows, `~/.local/share/MediaLog/library.json` on Linux,
-  app‑private storage on Android).
+  app‑private storage on Android/iOS, `localStorage` in the browser).
 
 ## Project layout
 
@@ -26,6 +26,8 @@ documentaries, audiobooks…
 MediaLog/            shared app: models, view models, views (all UI lives here)
 MediaLog.Desktop/    Windows + Linux entry point
 MediaLog.Android/    Android entry point
+MediaLog.iOS/        iOS entry point
+MediaLog.Browser/    WebAssembly entry point (stores data in localStorage)
 ```
 
 Media types (label, color, icon) are defined in `MediaLog/Models/MediaTypeInfo.cs` — add a value to
@@ -46,6 +48,13 @@ dotnet publish MediaLog.Desktop -c Release -r linux-x64 --self-contained -p:Publ
 # Android (needs: dotnet workload install android, plus an Android SDK and JDK 17+)
 dotnet build MediaLog.Android -c Release            # APK in MediaLog.Android/bin/Release/net10.0-android/
 dotnet build MediaLog.Android -t:Run                # deploy to a connected device / emulator
+
+# iOS (needs a Mac with Xcode: dotnet workload install ios)
+dotnet build MediaLog.iOS -t:Run
+
+# Browser / WebAssembly (needs: dotnet workload install wasm-tools)
+dotnet run --project MediaLog.Browser               # dev server
+dotnet publish MediaLog.Browser -c Release          # static site in bin/Release/net10.0-browser/publish/wwwroot
 ```
 
 If the Android SDK isn't found automatically, pass `-p:AndroidSdkDirectory=<path>`

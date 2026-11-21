@@ -11,6 +11,12 @@ public partial class App : Application
 {
     private MainViewModel? _viewModel;
 
+    /// <summary>
+    /// Storage backend; platforms without a persistent file system (the browser) set this
+    /// before the app starts. Defaults to a JSON file in the app data folder.
+    /// </summary>
+    public static ILibraryStorage? Storage { get; set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -20,7 +26,7 @@ public partial class App : Application
     }
 
     // One view model per process, so Android activity re-creation keeps the state.
-    private MainViewModel ViewModel => _viewModel ??= new MainViewModel(new LibraryStore());
+    private MainViewModel ViewModel => _viewModel ??= new MainViewModel(new LibraryStore(Storage));
 
     public override void OnFrameworkInitializationCompleted()
     {

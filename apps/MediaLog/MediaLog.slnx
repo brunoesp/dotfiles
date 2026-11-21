@@ -4,4 +4,8 @@
   <Project Path="MediaLog.Android/MediaLog.Android.csproj">
     <Deploy />
   </Project>
+  <Project Path="MediaLog.iOS/MediaLog.iOS.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="MediaLog.Browser/MediaLog.Browser.csproj" />
 </Solution>
