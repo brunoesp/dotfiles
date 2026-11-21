@@ -168,12 +168,82 @@
             <Setter Property="CornerRadius" Value="8" />
         </Style>
 
+        <!-- Sidebar: expand arrow and pin buttons -->
+        <Style Selector="Button.chevron, Button.pin">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.chevron">
+            <Setter Property="Margin" Value="-6,0,6,0" />
+        </Style>
+        <Style Selector="Button.chevron c|StrokeIcon, Button.pin c|StrokeIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SubtleText}" />
+        </Style>
+        <Style Selector="Button.pin">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <Style Selector="Button.pin:pointerover, Button.pin.pinned">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.pin.pinned c|StrokeIcon">
+            <Setter Property="Fill" Value="{DynamicResource SubtleText}" />
+        </Style>
+
+        <!-- View mode switcher -->
+        <Style Selector="Border.segmented">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="2" />
+        </Style>
+        <Style Selector="Button.seg">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="7" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="Button.seg c|StrokeIcon">
+            <Setter Property="Width" Value="17" />
+            <Setter Property="Height" Value="17" />
+            <Setter Property="Foreground" Value="{DynamicResource SubtleText}" />
+        </Style>
+        <Style Selector="Button.seg.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelected}" />
+        </Style>
+        <Style Selector="Button.seg.active c|StrokeIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+
+        <!-- Tiles: delete button sits on the colored header -->
+        <Style Selector="Button.tileDelete">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="Button.tileDelete:pointerover">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.tileDelete:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#33000000" />
+        </Style>
+
+        <!-- Compact rows: hairline separators -->
+        <Style Selector="Grid.compactRow">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Grid.compactRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource NavSelected}" />
+        </Style>
+
         <!-- Sidebar list -->
         <Style Selector="ListBox.nav">
             <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="ListBox.nav ListBoxItem">
-            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="MinHeight" Value="38" />
             <Setter Property="Margin" Value="8,2" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>

@@ -39,7 +39,8 @@ public partial class MainViewModel : ViewModelBase
             _library.Types.AddRange(MediaTypeDef.Defaults());
         RebuildTypes();
 
-        Master = ListViewModel.CreateMaster();
+        Master = ListViewModel.CreateMaster(_ => ToggleTypesExpanded());
+        Master.IsExpanded = _library.Settings.TypesExpanded;
         NavItems.Add(Master);
         foreach (var list in _library.Lists)
             AddListViewModel(list);
@@ -82,6 +83,123 @@ public partial class MainViewModel : ViewModelBase
         }
         if (selectedId is not null)
             NewType = _typeById.GetValueOrDefault(selectedId) ?? Types.FirstOrDefault();
+
+        // Keep per-type sidebar lists in sync with renamed / recolored / deleted types.
+        foreach (var (id, vm) in _typeLists.ToList())
+        {
+            if (_typeById.TryGetValue(id, out var info))
+            {
+                vm.Type = info;
+            }
+            else
+            {
+                _typeLists.Remove(id);
+                NavItems.Remove(vm);
+            }
+        }
+    }
+
+    // ==========================================================================
+    // Per-type lists under "All media"
+    // ==========================================================================
+
+    private readonly Dictionary<string, ListViewModel> _typeLists = new();
+
+    private ListViewModel TypeList(MediaTypeInfo type)
+    {
+        if (!_typeLists.TryGetValue(type.Id, out var vm))
+        {
+            vm = ListViewModel.ForType(type, TogglePin);
+            vm.IsPinned = _library.Settings.PinnedTypes.Contains(type.Id);
+            _typeLists[type.Id] = vm;
+        }
+        return vm;
+    }
+
+    private void ToggleTypesExpanded()
+    {
+        Master.IsExpanded = !Master.IsExpanded;
+        _library.Settings.TypesExpanded = Master.IsExpanded;
+        Persist();
+        // Collapsing hides an unpinned type list that may be selected.
+        if (!Master.IsExpanded && SelectedNav is { IsTypeList: true, IsPinned: false })
+            SelectedNav = Master;
+        Refresh();
+    }
+
+    private void TogglePin(ListViewModel list)
+    {
+        if (list.Type is not { } type)
+            return;
+        list.IsPinned = !list.IsPinned;
+        _library.Settings.PinnedTypes.Remove(type.Id);
+        if (list.IsPinned)
+            _library.Settings.PinnedTypes.Add(type.Id);
+        Persist();
+        Refresh();
+    }
+
+    /// <summary>
+    /// Shows a list per type with entries right below "All media": all of them when
+    /// expanded, only the pinned ones when collapsed.
+    /// </summary>
+    private void SyncTypeNav(IReadOnlyDictionary<string, int> perType)
+    {
+        var desired = Types
+            .Where(t => perType.GetValueOrDefault(t.Id) > 0)
+            .Select(TypeList)
+            .Where(vm => Master.IsExpanded || vm.IsPinned)
+            .ToList();
+
+        foreach (var stale in NavItems.Where(n => n.IsTypeList && !desired.Contains(n)).ToList())
+            NavItems.Remove(stale);
+        for (var i = 0; i < desired.Count; i++)
+        {
+            var vm = desired[i];
+            vm.Count = perType[vm.Type!.Id];
+            var current = NavItems.IndexOf(vm);
+            if (current == i + 1)
+                continue;
+            if (current >= 0)
+                NavItems.Move(current, i + 1);
+            else
+                NavItems.Insert(i + 1, vm);
+        }
+    }
+
+    private int TypeNavCount => NavItems.Skip(1).TakeWhile(n => n.IsTypeList).Count();
+
+    // ==========================================================================
+    // View modes
+    // ==========================================================================
+
+    private bool _loadingViewMode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCardsMode), nameof(IsTilesMode), nameof(IsCompactMode))]
+    public partial ViewMode CurrentViewMode { get; set; }
+
+    public bool IsCardsMode => CurrentViewMode == ViewMode.Cards;
+    public bool IsTilesMode => CurrentViewMode == ViewMode.Tiles;
+    public bool IsCompactMode => CurrentViewMode == ViewMode.Compact;
+
+    /// <summary>Number of tile columns; set by the view from the available width.</summary>
+    [ObservableProperty]
+    public partial int TileColumns { get; set; } = 4;
+
+    [RelayCommand]
+    private void SetViewMode(string mode)
+    {
+        if (Enum.TryParse<ViewMode>(mode, out var value))
+            CurrentViewMode = value;
+    }
+
+    partial void OnCurrentViewModeChanged(ViewMode value)
+    {
+        if (_loadingViewMode || SelectedNav is null)
+            return;
+        _library.Settings.ViewModes[SelectedNav.Key] = value;
+        Persist();
     }
 
     // ==========================================================================
@@ -101,17 +219,20 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<TypeStatViewModel> Stats { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMasterSelected), nameof(IsRenamableSelected), nameof(CanDeleteSelected))]
+    [NotifyPropertyChangedFor(nameof(IsMasterSelected), nameof(NeedsTargetList), nameof(IsRenamableSelected), nameof(CanDeleteSelected))]
     [NotifyCanExecuteChangedFor(nameof(AddEntryCommand))]
     public partial ListViewModel? SelectedNav { get; set; }
 
     public bool IsMasterSelected => SelectedNav?.IsMaster == true;
 
+    /// <summary>"All media" and type lists aren't stored lists: new entries need a target list.</summary>
+    public bool NeedsTargetList => SelectedNav is { Model: null };
+
     /// <summary>Selected list can be renamed in place (custom lists only).</summary>
     public bool IsRenamableSelected => SelectedNav?.CanRename == true;
 
     /// <summary>Only custom lists can be deleted; year lists follow the entries' dates.</summary>
-    public bool CanDeleteSelected => SelectedNav is { IsMaster: false, IsYearList: false };
+    public bool CanDeleteSelected => SelectedNav is { Model: not null, IsYearList: false };
 
     /// <summary>The automatic list for the current calendar year.</summary>
     public ListViewModel? CurrentYearList => YearList(DateTime.Today.Year);
@@ -148,7 +269,15 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedNavChanged(ListViewModel? value)
     {
         IsConfirmingDelete = false;
-        if (value is { IsMaster: false })
+        if (value is not null)
+        {
+            _loadingViewMode = true;
+            CurrentViewMode = _library.Settings.ViewModes.GetValueOrDefault(value.Key, ViewMode.Cards);
+            _loadingViewMode = false;
+        }
+        if (value?.Type is { } type)
+            NewType = type;
+        if (value is { Model: not null })
             TargetList = value;
         else if (TargetList is null || !UserLists.Contains(TargetList))
             TargetList = CurrentYearList ?? UserLists.FirstOrDefault();
@@ -195,12 +324,12 @@ public partial class MainViewModel : ViewModelBase
     public partial string? UndoText { get; set; }
 
     private bool CanAddEntry() =>
-        !string.IsNullOrWhiteSpace(NewName) && (IsMasterSelected ? TargetList : SelectedNav) is { IsMaster: false };
+        !string.IsNullOrWhiteSpace(NewName) && (NeedsTargetList ? TargetList : SelectedNav) is { Model: not null };
 
     [RelayCommand(CanExecute = nameof(CanAddEntry))]
     private void AddEntry()
     {
-        var target = IsMasterSelected ? TargetList : SelectedNav;
+        var target = NeedsTargetList ? TargetList : SelectedNav;
         if (target?.Model is null || string.IsNullOrWhiteSpace(NewName))
             return;
 
@@ -314,7 +443,7 @@ public partial class MainViewModel : ViewModelBase
             ? UserLists.TakeWhile(l => l.Model!.Year is { } y && y > year).Count()
             : UserLists.Count;
         UserLists.Insert(index, vm);
-        NavItems.Insert(index + 1, vm); // + 1 for the master list
+        NavItems.Insert(index + 1 + TypeNavCount, vm); // after "All media" and its type lists
         return vm;
     }
 
@@ -553,12 +682,16 @@ public partial class MainViewModel : ViewModelBase
             foreach (var list in UserLists)
                 list.Count = list.Model!.Year is { } y ? perYear.GetValueOrDefault(y) : list.Model.Entries.Count;
             Master.Count = all.Count;
+            SyncTypeNav(all.GroupBy(x => x.Entry.Kind).ToDictionary(g => g.Key, g => g.Count()));
+            if (SelectedNav is null || !NavItems.Contains(SelectedNav))
+                SelectedNav = CurrentYearList;
 
             // Year lists collect every entry completed that year, whichever list it is stored in.
             var scope = SelectedNav switch
             {
                 null => [],
                 { IsMaster: true } => all,
+                { Type: { } type } => all.Where(x => x.Entry.Kind == type.Id).ToList(),
                 { Model.Year: { } year } => all.Where(x => x.Entry.CompletedOn.Year == year).ToList(),
                 var l => all.Where(x => x.List == l).ToList(),
             };
@@ -584,7 +717,7 @@ public partial class MainViewModel : ViewModelBase
             CountText = IsFiltered ? $"{visible.Count} of {ScopeCount} {noun}" : $"{ScopeCount} {noun}";
             IsEmpty = visible.Count == 0;
             EmptyText = ScopeCount == 0
-                ? SelectedNav?.IsMaster == true
+                ? NeedsTargetList
                     ? "Nothing logged yet. Add the first thing you finished!"
                     : "This list is empty. Add the first thing you finished!"
                 : "No entries match the current filter.";

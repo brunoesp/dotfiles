@@ -25,6 +25,16 @@ public partial class MainView : UserControl
     {
         base.OnSizeChanged(e);
         UpdateLayoutMode(e.NewSize.Width);
+        UpdateTileColumns(e.NewSize.Width);
+    }
+
+    /// <summary>Picks a tile column count so tiles stay roughly 170px wide.</summary>
+    private void UpdateTileColumns(double width)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+        var contentWidth = width - (_compact == true ? 0 : Split.OpenPaneLength) - 24;
+        vm.TileColumns = System.Math.Clamp((int)(contentWidth / 170), 2, 8);
     }
 
     private void UpdateLayoutMode(double width)
@@ -54,5 +64,6 @@ public partial class MainView : UserControl
         base.OnDataContextChanged(e);
         if (_compact is { } compact && DataContext is MainViewModel vm)
             vm.IsPaneOpen = !compact;
+        UpdateTileColumns(Bounds.Width);
     }
 }

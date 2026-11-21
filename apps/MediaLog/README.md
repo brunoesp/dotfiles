@@ -22,6 +22,14 @@ documentaries, audiobooks…
 
   ![media types](docs/types.png)
 - **All media (master list)** – every entry from every list, with the **total count** and a color‑coded counter per type.
+  The arrow next to it expands one list per type (only types with entries). **Pin** a type list to keep
+  it in the sidebar even when "All media" is collapsed.
+- **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice
+  is remembered per list.
+
+  | Tiles | Compact |
+  |---|---|
+  | ![tiles](docs/tiles.png) | ![compact](docs/compact.png) |
 - Click a type chip to filter by it; search by title; entries sorted by completion date (newest first).
 - Undo for deleted entries.
 - Responsive: sidebar on wide screens, hamburger/overlay menu on phones. Follows the system light/dark theme.

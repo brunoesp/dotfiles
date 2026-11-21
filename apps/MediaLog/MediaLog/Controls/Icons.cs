@@ -13,6 +13,12 @@ public static class Icons
     public static Geometry Calendar { get; } = Geometry.Parse("M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M16 2v4 M8 2v4 M3 10h18");
     public static Geometry Pencil { get; } = Geometry.Parse("M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z");
     public static Geometry Tag { get; } = Geometry.Parse("M12 2H2v10l9.3 9.3a1 1 0 0 0 1.4 0l8.6-8.6a1 1 0 0 0 0-1.4z M7 7h.01");
+    public static Geometry ChevronRight { get; } = Geometry.Parse("M9 18l6-6-6-6");
+    public static Geometry ChevronDown { get; } = Geometry.Parse("M6 9l6 6 6-6");
+    public static Geometry Pin { get; } = Geometry.Parse("M12 17v5 M9 10.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z");
+    public static Geometry ViewCards { get; } = Geometry.Parse("M4 4h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z M4 14h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z");
+    public static Geometry ViewTiles { get; } = Geometry.Parse("M4 3h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z M14 3h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z M14 13h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1z M4 13h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1z");
+    public static Geometry ViewCompact { get; } = Geometry.Parse("M3 5h18 M3 9.67h18 M3 14.33h18 M3 19h18");
     public static Geometry Search { get; } = Geometry.Parse("M11 3a8 8 0 1 1 0 16 8 8 0 0 1 0-16z M21 21l-4.3-4.3");
     public static Geometry Close { get; } = Geometry.Parse("M18 6L6 18 M6 6l12 12");
     public static Geometry Check { get; } = Geometry.Parse("M20 6L9 17l-5-5");

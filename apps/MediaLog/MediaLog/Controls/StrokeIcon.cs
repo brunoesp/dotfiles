@@ -16,12 +16,15 @@ public sealed class StrokeIcon : Control
     public static readonly StyledProperty<IBrush?> ForegroundProperty =
         AvaloniaProperty.Register<StrokeIcon, IBrush?>(nameof(Foreground), inherits: true);
 
+    public static readonly StyledProperty<IBrush?> FillProperty =
+        AvaloniaProperty.Register<StrokeIcon, IBrush?>(nameof(Fill));
+
     public static readonly StyledProperty<double> StrokeThicknessProperty =
         AvaloniaProperty.Register<StrokeIcon, double>(nameof(StrokeThickness), 2.0);
 
     static StrokeIcon()
     {
-        AffectsRender<StrokeIcon>(DataProperty, ForegroundProperty, StrokeThicknessProperty);
+        AffectsRender<StrokeIcon>(DataProperty, ForegroundProperty, FillProperty, StrokeThicknessProperty);
     }
 
     public StrokeIcon()
@@ -40,6 +43,13 @@ public sealed class StrokeIcon : Control
     {
         get => GetValue(ForegroundProperty);
         set => SetValue(ForegroundProperty, value);
+    }
+
+    /// <summary>Optional fill (e.g. a "pinned" state).</summary>
+    public IBrush? Fill
+    {
+        get => GetValue(FillProperty);
+        set => SetValue(FillProperty, value);
     }
 
     public double StrokeThickness
@@ -63,7 +73,7 @@ public sealed class StrokeIcon : Control
 
         using (context.PushTransform(Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(offsetX, offsetY)))
         {
-            context.DrawGeometry(null, pen, Data);
+            context.DrawGeometry(Fill, pen, Data);
         }
     }
 }
