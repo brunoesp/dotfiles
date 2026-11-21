@@ -59,6 +59,12 @@
         <Style Selector="Button.icon:pointerover c|StrokeIcon">
             <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
         </Style>
+        <Style Selector="Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.icon:disabled">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
         <Style Selector="Button.danger:pointerover c|StrokeIcon">
             <Setter Property="Foreground" Value="#E53935" />
         </Style>
@@ -137,6 +143,29 @@
         </Style>
         <Style Selector="Button.add:disabled">
             <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <!-- Type manager swatches -->
+        <Style Selector="ListBox.swatches">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.swatches ListBoxItem">
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Margin" Value="0,0,4,4" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.swatches ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.swatches ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelected}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+
+        <Style Selector="Button.navAction">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="4,8" />
+            <Setter Property="CornerRadius" Value="8" />
         </Style>
 
         <!-- Sidebar list -->

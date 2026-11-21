@@ -18,6 +18,10 @@ public sealed class MediaList
 /// <summary>Root object persisted to disk.</summary>
 public sealed class Library
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
+
+    /// <summary>Media types; seeded with <see cref="MediaTypeDef.Defaults"/> when empty.</summary>
+    public List<MediaTypeDef> Types { get; set; } = [];
+
     public List<MediaList> Lists { get; set; } = [];
 }

@@ -51,6 +51,13 @@
                     </StackPanel>
 
                     <Border DockPanel.Dock="Bottom" Padding="16,12" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0">
+                        <StackPanel Spacing="10">
+                        <Button Classes="navAction" Command="{Binding OpenTypeManagerCommand}" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <c:StrokeIcon Data="{x:Static c:Icons.Tag}" Width="18" Height="18" Foreground="{DynamicResource SubtleText}" />
+                                <TextBlock Text="Media types" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                             <TextBox Text="{Binding NewListName}" PlaceholderText="New list…">
                                 <TextBox.KeyBindings>
@@ -61,6 +68,7 @@
                                 <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" Width="16" Height="16" />
                             </Button>
                         </Grid>
+                        </StackPanel>
                     </Border>
 
                     <ListBox x:Name="Nav" Classes="nav"
@@ -248,5 +256,100 @@
                 </Button>
             </Grid>
         </Border>
+        <!-- ============ Media types manager (overlay) ============ -->
+        <Grid Grid.RowSpan="2" IsVisible="{Binding IsTypeManagerOpen}">
+            <Border Background="#99000000" />
+            <Border Classes="card" MaxWidth="600" MaxHeight="820" Margin="12,24" Padding="0"
+                    VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto" Margin="20,14,10,6">
+                        <TextBlock Text="Media types" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="icon" Command="{Binding CloseTypeManagerCommand}" ToolTip.Tip="Close">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Close}" />
+                        </Button>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1">
+                        <StackPanel Margin="20,4,20,20" Spacing="12">
+                            <!-- Editor -->
+                            <Border Background="{DynamicResource AppBackground}" CornerRadius="12" Padding="14">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="{Binding TypeEditorTitle}" FontWeight="SemiBold" Classes="subtle" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <Border Width="44" Height="44" CornerRadius="22" Background="{Binding EditPreview.Brush}">
+                                            <c:StrokeIcon Data="{Binding EditPreview.Icon}" Foreground="{Binding EditPreview.OnBrush}" Width="22" Height="22" StrokeThickness="2.2" />
+                                        </Border>
+                                        <TextBox Grid.Column="1" Text="{Binding EditTypeName}" PlaceholderText="Type name (e.g. Manga, Board game)"
+                                                 VerticalAlignment="Center">
+                                            <TextBox.KeyBindings>
+                                                <KeyBinding Gesture="Enter" Command="{Binding SaveTypeCommand}" />
+                                            </TextBox.KeyBindings>
+                                        </TextBox>
+                                    </Grid>
+
+                                    <TextBlock Text="Color" Classes="subtle" FontSize="12" />
+                                    <ListBox Classes="swatches" ItemsSource="{x:Static vm:MainViewModel.Palette}" SelectedItem="{Binding EditPaletteColor}">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:PaletteColor">
+                                                <Ellipse Width="28" Height="28" Fill="{Binding Brush}" ToolTip.Tip="{Binding Hex}" />
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <TextBox Text="{Binding EditTypeColor}" PlaceholderText="#RRGGBB" Width="130" HorizontalAlignment="Left"
+                                             ToolTip.Tip="Any color as hex" />
+
+                                    <TextBlock Text="Icon" Classes="subtle" FontSize="12" />
+                                    <ListBox Classes="swatches" ItemsSource="{x:Static vm:MainViewModel.IconOptions}" SelectedItem="{Binding EditTypeIcon}">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="m:TypeIcon">
+                                                <c:StrokeIcon Data="{Binding Geometry}" Width="22" Height="22" Margin="3"
+                                                              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="accent" Content="{Binding SaveTypeText}" Command="{Binding SaveTypeCommand}" />
+                                        <Button Content="Cancel" Command="{Binding StartNewTypeCommand}" IsVisible="{Binding IsEditingType}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Existing types -->
+                            <ItemsControl ItemsSource="{Binding TypeRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:TypeRowViewModel">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,3">
+                                            <Border Width="32" Height="32" CornerRadius="16" Background="{Binding Type.Brush}">
+                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="17" Height="17" StrokeThickness="2.2" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Type.Label}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding UsageText}" Classes="subtle" FontSize="12" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Classes="icon" Command="{Binding EditCommand}" ToolTip.Tip="Edit type">
+                                                <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" />
+                                            </Button>
+                                            <Button Grid.Column="3" Classes="icon danger" Command="{Binding DeleteCommand}" ToolTip.Tip="{Binding DeleteTip}">
+                                                <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

@@ -11,10 +11,16 @@ documentaries, audiobooks…
 ## Features
 
 - **Year lists** – a list for the current year (e.g. "2026") is created automatically and is the default.
-  Past years' lists are kept; on New Year a fresh list for the new year is created (even while the app is open).
+  A year list shows *every* entry completed that year, including those stored in your custom lists, and
+  there's one for each year that has entries. Past years are kept; on New Year a fresh list appears
+  (even while the app is open). Adding an entry dated in another year files it under that year.
 - **Custom lists** – create as many extra lists as you like (e.g. "Favourites"); rename by clicking the title, delete from the header.
 - **Entries** – added from a one-line bar: type · title · date · big **+** button (or press Enter).
   Each type has its own vivid **color** and **icon**.
+- **Media types** – 13 built-in types (incl. *Tech Book* and *Anime Movie*); create your own or edit any
+  type's name, color and icon from **Media types** in the sidebar. Types that are in use can't be deleted.
+
+  ![media types](docs/types.png)
 - **All media (master list)** – every entry from every list, with the **total count** and a color‑coded counter per type.
 - Click a type chip to filter by it; search by title; entries sorted by completion date (newest first).
 - Undo for deleted entries.
@@ -33,8 +39,8 @@ MediaLog.iOS/        iOS entry point
 MediaLog.Browser/    WebAssembly entry point (stores data in localStorage)
 ```
 
-Media types (label, color, icon) are defined in `MediaLog/Models/MediaTypeInfo.cs` — add a value to
-`MediaKind` and a line there to introduce a new type.
+The default media types are listed in `MediaLog/Models/MediaTypeDef.cs` and the available icons in
+`MediaLog/Models/TypeIcons.cs`; user-created types are stored in the library file.
 
 ## Build & run
 
