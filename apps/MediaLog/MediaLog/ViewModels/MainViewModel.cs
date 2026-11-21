@@ -47,6 +47,7 @@ public partial class MainViewModel : ViewModelBase
 
         NewType = Types[0];
         NewDate = DateTime.Today;
+        NewCover = CreateNewCover();
         SyncYearLists();
         SelectedNav = CurrentYearList;
         StartNewType();
@@ -312,6 +313,40 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial MediaTypeInfo? NewType { get; set; }
 
+    /// <summary>Cover chosen from the add bar for the next new entry.</summary>
+    [ObservableProperty]
+    public partial CoverPickerViewModel NewCover { get; set; } = null!;
+
+    [ObservableProperty]
+    public partial bool IsNewCoverOpen { get; set; }
+
+    private string _newCoverQuery = "";
+
+    private CoverPickerViewModel CreateNewCover() => new(null, null, "", () => NewType);
+
+    [RelayCommand]
+    private void OpenNewCover()
+    {
+        // Search for the title being typed (unless the user changed the search themselves).
+        var title = NewName.Trim();
+        if (NewCover.SearchQuery.Length == 0 || NewCover.SearchQuery == _newCoverQuery)
+        {
+            if (NewCover.SearchQuery != title)
+                NewCover.Results.Clear();
+            NewCover.SearchQuery = title;
+            _newCoverQuery = title;
+        }
+        IsNewCoverOpen = true;
+        NewCover.SearchIfIdle();
+    }
+
+    [RelayCommand]
+    private void CloseNewCover()
+    {
+        NewCover.CancelSearch();
+        IsNewCoverOpen = false;
+    }
+
     [ObservableProperty]
     public partial DateTime? NewDate { get; set; }
 
@@ -339,8 +374,14 @@ public partial class MainViewModel : ViewModelBase
         if (target.IsYearList)
             target = EnsureYearList(date.Year);
 
-        target.Model!.Entries.Add(new MediaEntry { Name = NewName.Trim(), Kind = type.Id, CompletedOn = date });
+        var imageUrl = NewCover.ImageUrl;
+        target.Model!.Entries.Add(new MediaEntry { Name = NewName.Trim(), Kind = type.Id, CompletedOn = date, ImageUrl = imageUrl });
+        if (imageUrl is not null)
+            _ = ImageCache.SaveToDiskAsync(imageUrl);
         NewName = "";
+        NewCover.CancelSearch();
+        NewCover = CreateNewCover();
+        _newCoverQuery = "";
         // Make sure the newly added item is visible.
         if (TypeFilter is not null && TypeFilter != type.Id)
             TypeFilter = null;
@@ -409,7 +450,7 @@ public partial class MainViewModel : ViewModelBase
         entry.Name = editor.Name.Trim();
         entry.Kind = editor.Type.Id;
         entry.CompletedOn = date;
-        entry.ImageUrl = editor.ImageUrl;
+        entry.ImageUrl = editor.Cover.ImageUrl;
         if (entry.ImageUrl is { } url)
             _ = ImageCache.SaveToDiskAsync(url);
 

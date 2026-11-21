@@ -190,7 +190,7 @@
                         <!-- Add entry bar: type · title · date · (list) · + -->
                         <Border Classes="composer" Margin="16,6,16,14">
                             <StackPanel>
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
                                     <ComboBox Classes="typePicker" ItemsSource="{Binding Types}" SelectedItem="{Binding NewType}"
                                               Background="{Binding NewType.Brush}" ToolTip.Tip="Type">
                                         <ComboBox.SelectionBoxItemTemplate>
@@ -224,7 +224,18 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <Button Grid.Column="3" Classes="add" Command="{Binding AddEntryCommand}" ToolTip.Tip="Add (Enter)">
+                                    <Button Grid.Column="3" Classes="cover" Command="{Binding OpenNewCoverCommand}"
+                                            ToolTip.Tip="Choose a cover image">
+                                        <Panel>
+                                            <c:StrokeIcon Data="{x:Static c:Icons.Image}" Width="20" Height="20"
+                                                          IsVisible="{Binding NewCover.Image, Converter={x:Static ObjectConverters.IsNull}}" />
+                                            <Border CornerRadius="6" ClipToBounds="True" Width="30" Height="44"
+                                                    IsVisible="{Binding NewCover.Image, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <Image Source="{Binding NewCover.Image}" Stretch="UniformToFill" />
+                                            </Border>
+                                        </Panel>
+                                    </Button>
+                                    <Button Grid.Column="4" Classes="add" Command="{Binding AddEntryCommand}" ToolTip.Tip="Add (Enter)">
                                         <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="White" Width="26" Height="26" StrokeThickness="2.6" />
                                     </Button>
                                 </Grid>
@@ -292,7 +303,9 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:EntryViewModel">
                                     <Border Classes="card" Margin="4" ClipToBounds="True">
-                                        <Grid RowDefinitions="150,Auto">
+                                        <Grid RowDefinitions="Auto,Auto">
+                                            <!-- 2:3 cover -->
+                                            <c:AspectBox Ratio="1.5">
                                             <Border Background="{Binding Type.Brush}" ClipToBounds="True">
                                                 <Panel>
                                                     <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
@@ -306,6 +319,7 @@
                                                     </Border>
                                                 </Panel>
                                             </Border>
+                                            </c:AspectBox>
                                             <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Button Classes="icon tileButton" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry / choose image">
@@ -382,6 +396,38 @@
                 </Button>
             </Grid>
         </Border>
+        <!-- ============ Cover for a new entry (overlay) ============ -->
+        <Grid Grid.RowSpan="2" IsVisible="{Binding IsNewCoverOpen}">
+            <Border Background="#99000000" />
+            <Border Classes="card" MaxWidth="640" MaxHeight="820" Margin="12,24" Padding="0"
+                    VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="20,14,10,6">
+                        <Border Width="40" Height="60" CornerRadius="6" ClipToBounds="True" Background="{Binding NewType.Brush}">
+                            <Panel>
+                                <c:StrokeIcon Data="{Binding NewType.Icon}" Foreground="{Binding NewType.OnBrush}" Width="20" Height="20" />
+                                <Image Source="{Binding NewCover.Image}" Stretch="UniformToFill" />
+                            </Panel>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Cover image" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Classes="subtle" FontSize="12" Text="Used for the entry you're adding" />
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="icon" Command="{Binding CloseNewCoverCommand}" ToolTip.Tip="Close">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Close}" />
+                        </Button>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1">
+                        <views:CoverPickerView DataContext="{Binding NewCover}" Margin="20,4,20,16" />
+                    </ScrollViewer>
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="20,10,20,16">
+                        <Button Content="No image" Command="{Binding NewCover.RemoveCommand}" IsVisible="{Binding NewCover.HasImage}" />
+                        <Button Grid.Column="2" Classes="accent" Content="Done" Command="{Binding CloseNewCoverCommand}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- ============ Edit entry (overlay) ============ -->
         <Grid Grid.RowSpan="2" IsVisible="{Binding IsEditorOpen}">
             <Border Background="#99000000" />
@@ -405,8 +451,8 @@
                                         VerticalAlignment="Top">
                                     <Panel>
                                         <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="36" Height="36" StrokeThickness="1.8" />
-                                        <Image Source="{Binding Image}" Stretch="UniformToFill"
-                                               IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <Image Source="{Binding Cover.Image}" Stretch="UniformToFill"
+                                               IsVisible="{Binding Cover.Image, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                     </Panel>
                                 </Border>
                                 <StackPanel Grid.Column="1" Spacing="8">
@@ -417,7 +463,7 @@
                                                             SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy" ToolTip.Tip="Date completed" />
                                         <ComboBox ItemsSource="{Binding Lists}" SelectedItem="{Binding List}" MinWidth="130" ToolTip.Tip="List" />
                                     </WrapPanel>
-                                    <Button Content="Remove image" Command="{Binding RemoveImageCommand}" IsVisible="{Binding HasImage}" />
+                                    <Button Content="Remove image" Command="{Binding Cover.RemoveCommand}" IsVisible="{Binding Cover.HasImage}" />
                                 </StackPanel>
                             </Grid>
 
@@ -425,49 +471,7 @@
                             <Border Background="{DynamicResource AppBackground}" CornerRadius="12" Padding="14">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Cover image" FontWeight="SemiBold" Classes="subtle" />
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <TextBox Text="{Binding SearchQuery}" PlaceholderText="Search images by title…">
-                                            <TextBox.InnerLeftContent>
-                                                <c:StrokeIcon Data="{x:Static c:Icons.Search}" Width="16" Height="16" Margin="10,0,0,0"
-                                                              Foreground="{DynamicResource SubtleText}" />
-                                            </TextBox.InnerLeftContent>
-                                            <TextBox.KeyBindings>
-                                                <KeyBinding Gesture="Enter" Command="{Binding SearchImagesCommand}" />
-                                            </TextBox.KeyBindings>
-                                        </TextBox>
-                                        <Button Grid.Column="1" Classes="accent" Content="Find images" Command="{Binding SearchImagesCommand}" />
-                                    </Grid>
-                                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" />
-                                    <TextBlock Text="{Binding SearchStatus}" Classes="subtle" FontSize="12" TextWrapping="Wrap"
-                                               IsVisible="{Binding SearchStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                    <ListBox Classes="imageResults" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}"
-                                             IsVisible="{Binding HasResults}">
-                                        <ListBox.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ListBox.ItemsPanel>
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate DataType="vm:ImageResultViewModel">
-                                                <Border Width="92" Height="132" CornerRadius="8" ClipToBounds="True"
-                                                        Background="{DynamicResource CardBorder}" ToolTip.Tip="{Binding Tip}">
-                                                    <Panel>
-                                                        <ProgressBar IsIndeterminate="True" Width="40" MinWidth="40" VerticalAlignment="Center"
-                                                                     IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
-                                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
-                                                    </Panel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <TextBox Text="{Binding PastedUrl}" PlaceholderText="…or paste an image link" FontSize="13">
-                                            <TextBox.KeyBindings>
-                                                <KeyBinding Gesture="Enter" Command="{Binding UsePastedUrlCommand}" />
-                                            </TextBox.KeyBindings>
-                                        </TextBox>
-                                        <Button Grid.Column="1" Content="Use link" Command="{Binding UsePastedUrlCommand}" />
-                                    </Grid>
+                                    <views:CoverPickerView DataContext="{Binding Cover}" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>

@@ -15,7 +15,8 @@ documentaries, audiobooks…
   there's one for each year that has entries. Past years are kept; on New Year a fresh list appears
   (even while the app is open). Adding an entry dated in another year files it under that year.
 - **Custom lists** – create as many extra lists as you like (e.g. "Favourites"); rename by clicking the title, delete from the header.
-- **Entries** – added from a one-line bar: type · title · date · big **+** button (or press Enter).
+- **Entries** – added from a one-line bar: type · title · date · cover · big **+** button (or press Enter).
+  The cover button searches images for the title being typed so the entry is added with its cover.
   Each type has its own vivid **color** and **icon**.
 - **Media types** – 13 built-in types (incl. *Tech Book* and *Anime Movie*); create your own or edit any
   type's name, color and icon from **Media types** in the sidebar. Types that are in use can't be deleted.
@@ -26,7 +27,7 @@ documentaries, audiobooks…
   it in the sidebar even when "All media" is collapsed.
 - **Editing** – the pencil on any entry opens an editor for title, type, date and list (moving it
   between lists), plus a **cover image**: *Find images* searches online by title and shows a grid of
-  suggestions to pick from (or paste any image link). Covers show in tiles mode and as the entry badge,
+  suggestions to pick from (or paste any image link). Covers show in tiles mode (2:3 poster ratio) and as the entry badge,
   and are cached on disk so they work offline.
   Image sources (free, no API keys), chosen by type: Wikipedia, TVmaze (series), Open Library (books),
   iTunes (albums, podcasts, audiobooks, ebooks, movies), AniList and Jikan/MyAnimeList (anime, manga).

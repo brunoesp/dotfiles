@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaLog.ViewModels"
+             xmlns:c="using:MediaLog.Controls"
+             x:Class="MediaLog.Views.CoverPickerView"
+             x:DataType="vm:CoverPickerViewModel">
+    <!-- Online image search + pasted link; selecting a suggestion sets the cover -->
+    <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding SearchQuery}" PlaceholderText="Search images by title…">
+                <TextBox.InnerLeftContent>
+                    <c:StrokeIcon Data="{x:Static c:Icons.Search}" Width="16" Height="16" Margin="10,0,0,0"
+                                  Foreground="{DynamicResource SubtleText}" />
+                </TextBox.InnerLeftContent>
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+                </TextBox.KeyBindings>
+            </TextBox>
+            <Button Grid.Column="1" Classes="accent" Content="Find images" Command="{Binding SearchCommand}" />
+        </Grid>
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" />
+        <TextBlock Text="{Binding SearchStatus}" Classes="subtle" FontSize="12" TextWrapping="Wrap"
+                   IsVisible="{Binding SearchStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <ListBox Classes="imageResults" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}"
+                 IsVisible="{Binding HasResults}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="vm:ImageResultViewModel">
+                    <Border Width="92" Height="138" CornerRadius="8" ClipToBounds="True"
+                            Background="{DynamicResource CardBorder}" ToolTip.Tip="{Binding Tip}">
+                        <Panel>
+                            <ProgressBar IsIndeterminate="True" Width="40" MinWidth="40" VerticalAlignment="Center"
+                                         IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
+                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                        </Panel>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding PastedUrl}" PlaceholderText="…or paste an image link" FontSize="13">
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding UsePastedUrlCommand}" />
+                </TextBox.KeyBindings>
+            </TextBox>
+            <Button Grid.Column="1" Content="Use link" Command="{Binding UsePastedUrlCommand}" />
+        </Grid>
+    </StackPanel>
+</UserControl>
