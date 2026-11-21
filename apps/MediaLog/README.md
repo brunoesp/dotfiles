@@ -24,6 +24,14 @@ documentaries, audiobooks…
 - **All media (master list)** – every entry from every list, with the **total count** and a color‑coded counter per type.
   The arrow next to it expands one list per type (only types with entries). **Pin** a type list to keep
   it in the sidebar even when "All media" is collapsed.
+- **Editing** – the pencil on any entry opens an editor for title, type, date and list (moving it
+  between lists), plus a **cover image**: *Find images* searches online by title and shows a grid of
+  suggestions to pick from (or paste any image link). Covers show in tiles mode and as the entry badge,
+  and are cached on disk so they work offline.
+  Image sources (free, no API keys), chosen by type: Wikipedia, TVmaze (series), Open Library (books),
+  iTunes (albums, podcasts, audiobooks, ebooks, movies), Jikan/MyAnimeList (anime, manga).
+
+  ![editor](docs/editor.png)
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice
   is remembered per list.
 

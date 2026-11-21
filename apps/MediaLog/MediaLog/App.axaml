@@ -218,15 +218,29 @@
             <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
         </Style>
 
-        <!-- Tiles: delete button sits on the colored header -->
-        <Style Selector="Button.tileDelete">
-            <Setter Property="Opacity" Value="0.7" />
+        <!-- Tiles: edit / delete buttons float over the cover -->
+        <Style Selector="Border.tileActions">
+            <Setter Property="Background" Value="#66000000" />
+            <Setter Property="CornerRadius" Value="10" />
         </Style>
-        <Style Selector="Button.tileDelete:pointerover">
-            <Setter Property="Opacity" Value="1" />
+        <Style Selector="Button.tileButton">
+            <Setter Property="Padding" Value="6" />
         </Style>
-        <Style Selector="Button.tileDelete:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#33000000" />
+        <Style Selector="Button.tileButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#33FFFFFF" />
+        </Style>
+
+        <!-- Image suggestions -->
+        <Style Selector="ListBox.imageResults">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.imageResults ListBoxItem">
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="Margin" Value="0,0,4,4" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+        <Style Selector="ListBox.imageResults ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.imageResults ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3D5AFE" />
         </Style>
 
         <!-- Compact rows: hairline separators -->

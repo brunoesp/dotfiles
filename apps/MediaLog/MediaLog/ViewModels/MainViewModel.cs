@@ -389,6 +389,47 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // ==========================================================================
+    // Entry editor
+    // ==========================================================================
+
+    /// <summary>The open "Edit entry" dialog, if any.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditorOpen))]
+    public partial EntryEditorViewModel? Editor { get; set; }
+
+    public bool IsEditorOpen => Editor is not null;
+
+    private void OpenEditor(EntryViewModel entry) =>
+        Editor = new EntryEditorViewModel(entry, Types, UserLists.ToList(), SaveEditor, DeleteEntry, () => Editor = null);
+
+    private void SaveEditor(EntryEditorViewModel editor)
+    {
+        var entry = editor.Entry.Model;
+        var date = DateOnly.FromDateTime(editor.Date ?? entry.CompletedOn.ToDateTime(TimeOnly.MinValue));
+        entry.Name = editor.Name.Trim();
+        entry.Kind = editor.Type.Id;
+        entry.CompletedOn = date;
+        entry.ImageUrl = editor.ImageUrl;
+        if (entry.ImageUrl is { } url)
+            _ = ImageCache.SaveToDiskAsync(url);
+
+        // Move between lists; entries kept in a year list follow their date.
+        var source = editor.Entry.List;
+        var target = editor.List;
+        if (target.IsYearList)
+            target = EnsureYearList(date.Year);
+        if (target != source && _library.Lists.Contains(source.Model!))
+        {
+            source.Model!.Entries.Remove(entry);
+            target.Model!.Entries.Add(entry);
+        }
+
+        Editor = null;
+        Persist();
+        Refresh();
+    }
+
+    // ==========================================================================
     // Lists
     // ==========================================================================
 
@@ -711,7 +752,7 @@ public partial class MainViewModel : ViewModelBase
 
             Entries.Clear();
             foreach (var (entry, list) in visible)
-                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry));
+                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor));
 
             var noun = ScopeCount == 1 ? "item" : "items";
             CountText = IsFiltered ? $"{visible.Count} of {ScopeCount} {noun}" : $"{ScopeCount} {noun}";

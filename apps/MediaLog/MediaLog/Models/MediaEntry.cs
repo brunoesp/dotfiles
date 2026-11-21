@@ -10,4 +10,7 @@ public sealed class MediaEntry
     /// <summary>Id of the entry's <see cref="MediaTypeDef"/>.</summary>
     public string Kind { get; set; } = "Other";
     public DateOnly CompletedOn { get; set; }
+
+    /// <summary>Optional cover / poster image chosen by the user.</summary>
+    public string? ImageUrl { get; set; }
 }

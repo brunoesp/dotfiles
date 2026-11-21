@@ -253,8 +253,11 @@
                                             <!-- color stripe -->
                                             <Border Background="{Binding Type.Brush}" />
                                             <Border Grid.Column="1" Width="34" Height="34" CornerRadius="17" Margin="10,7"
-                                                    Background="{Binding Type.Brush}">
-                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18" StrokeThickness="2.2" />
+                                                    Background="{Binding Type.Brush}" ClipToBounds="True">
+                                                <Panel>
+                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18" StrokeThickness="2.2" />
+                                                    <Image Source="{Binding Image}" Stretch="UniformToFill" IsVisible="{Binding HasImage}" />
+                                                </Panel>
                                             </Border>
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1" Margin="0,6">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
@@ -266,10 +269,14 @@
                                                     <TextBlock Classes="subtle" Text="{Binding List.Name}" FontSize="12" IsVisible="{Binding ShowList}" />
                                                 </WrapPanel>
                                             </StackPanel>
-                                            <Button Grid.Column="3" Classes="icon danger" Margin="4,0,8,0"
-                                                    Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
-                                                <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
-                                            </Button>
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="4,0,8,0">
+                                                <Button Classes="icon" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
+                                                    <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" />
+                                                </Button>
+                                                <Button Classes="icon danger" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                                                    <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
+                                                </Button>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -285,15 +292,30 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:EntryViewModel">
                                     <Border Classes="card" Margin="4" ClipToBounds="True">
-                                        <Grid RowDefinitions="88,Auto">
-                                            <Border Background="{Binding Type.Brush}">
-                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
-                                                              Width="40" Height="40" StrokeThickness="1.8" />
+                                        <Grid RowDefinitions="150,Auto">
+                                            <Border Background="{Binding Type.Brush}" ClipToBounds="True">
+                                                <Panel>
+                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
+                                                                  Width="44" Height="44" StrokeThickness="1.8" />
+                                                    <Image Source="{Binding Image}" Stretch="UniformToFill" IsVisible="{Binding HasImage}" />
+                                                    <!-- type badge over the cover image -->
+                                                    <Border Width="26" Height="26" CornerRadius="13" Margin="8" Background="{Binding Type.Brush}"
+                                                            HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasImage}"
+                                                            BorderBrush="#CCFFFFFF" BorderThickness="1.5">
+                                                        <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="14" Height="14" StrokeThickness="2.4" />
+                                                    </Border>
+                                                </Panel>
                                             </Border>
-                                            <Button Classes="icon tileDelete" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry"
-                                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
-                                                <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Foreground="{Binding Type.OnBrush}" Width="15" Height="15" />
-                                            </Button>
+                                            <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Classes="icon tileButton" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry / choose image">
+                                                        <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Foreground="White" Width="15" Height="15" />
+                                                    </Button>
+                                                    <Button Classes="icon tileButton" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                                                        <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Foreground="White" Width="15" Height="15" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Border>
                                             <StackPanel Grid.Row="1" Margin="10,8,10,10" Spacing="2">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
                                                            TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
@@ -328,10 +350,14 @@
                                                        FontSize="11" VerticalAlignment="Center" Margin="8,0" Classes="compactType" />
                                             <TextBlock Grid.Column="3" Classes="subtle" Text="{Binding DateText}" FontSize="12" VerticalAlignment="Center"
                                                        MinWidth="78" TextAlignment="Right" />
-                                            <Button Grid.Column="4" Classes="icon danger" Padding="6" Margin="4,0,6,0"
-                                                    Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
-                                                <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Width="15" Height="15" />
-                                            </Button>
+                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,6,0">
+                                                <Button Classes="icon" Padding="6" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
+                                                    <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Width="15" Height="15" />
+                                                </Button>
+                                                <Button Classes="icon danger" Padding="6" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                                                    <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Width="15" Height="15" />
+                                                </Button>
+                                            </StackPanel>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -356,6 +382,109 @@
                 </Button>
             </Grid>
         </Border>
+        <!-- ============ Edit entry (overlay) ============ -->
+        <Grid Grid.RowSpan="2" IsVisible="{Binding IsEditorOpen}">
+            <Border Background="#99000000" />
+            <Border Classes="card" MaxWidth="640" MaxHeight="860" Margin="12,24" Padding="0"
+                    VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000"
+                    DataContext="{Binding Editor}" x:DataType="vm:EntryEditorViewModel">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Grid ColumnDefinitions="*,Auto" Margin="20,14,10,6">
+                        <TextBlock Text="Edit entry" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="icon" Command="{Binding CancelCommand}" ToolTip.Tip="Close">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Close}" />
+                        </Button>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1">
+                        <StackPanel Margin="20,4,20,16" Spacing="14">
+                            <!-- Details -->
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                                <!-- current image / placeholder -->
+                                <Border Width="96" Height="136" CornerRadius="10" ClipToBounds="True" Background="{Binding Type.Brush}"
+                                        VerticalAlignment="Top">
+                                    <Panel>
+                                        <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="36" Height="36" StrokeThickness="1.8" />
+                                        <Image Source="{Binding Image}" Stretch="UniformToFill"
+                                               IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    </Panel>
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBox Text="{Binding Name}" PlaceholderText="Title" FontSize="15" />
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                        <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding Type}" MinWidth="170" ToolTip.Tip="Type" />
+                                        <CalendarDatePicker SelectedDate="{Binding Date}" Width="150"
+                                                            SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy" ToolTip.Tip="Date completed" />
+                                        <ComboBox ItemsSource="{Binding Lists}" SelectedItem="{Binding List}" MinWidth="130" ToolTip.Tip="List" />
+                                    </WrapPanel>
+                                    <Button Content="Remove image" Command="{Binding RemoveImageCommand}" IsVisible="{Binding HasImage}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Image search -->
+                            <Border Background="{DynamicResource AppBackground}" CornerRadius="12" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Cover image" FontWeight="SemiBold" Classes="subtle" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBox Text="{Binding SearchQuery}" PlaceholderText="Search images by title…">
+                                            <TextBox.InnerLeftContent>
+                                                <c:StrokeIcon Data="{x:Static c:Icons.Search}" Width="16" Height="16" Margin="10,0,0,0"
+                                                              Foreground="{DynamicResource SubtleText}" />
+                                            </TextBox.InnerLeftContent>
+                                            <TextBox.KeyBindings>
+                                                <KeyBinding Gesture="Enter" Command="{Binding SearchImagesCommand}" />
+                                            </TextBox.KeyBindings>
+                                        </TextBox>
+                                        <Button Grid.Column="1" Classes="accent" Content="Find images" Command="{Binding SearchImagesCommand}" />
+                                    </Grid>
+                                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" />
+                                    <TextBlock Text="{Binding SearchStatus}" Classes="subtle" FontSize="12" TextWrapping="Wrap"
+                                               IsVisible="{Binding SearchStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <ListBox Classes="imageResults" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}"
+                                             IsVisible="{Binding HasResults}">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:ImageResultViewModel">
+                                                <Border Width="92" Height="132" CornerRadius="8" ClipToBounds="True"
+                                                        Background="{DynamicResource CardBorder}" ToolTip.Tip="{Binding Tip}">
+                                                    <Panel>
+                                                        <ProgressBar IsIndeterminate="True" Width="40" MinWidth="40" VerticalAlignment="Center"
+                                                                     IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
+                                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                    </Panel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBox Text="{Binding PastedUrl}" PlaceholderText="…or paste an image link" FontSize="13">
+                                            <TextBox.KeyBindings>
+                                                <KeyBinding Gesture="Enter" Command="{Binding UsePastedUrlCommand}" />
+                                            </TextBox.KeyBindings>
+                                        </TextBox>
+                                        <Button Grid.Column="1" Content="Use link" Command="{Binding UsePastedUrlCommand}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Footer -->
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="20,10,20,16">
+                        <Button Classes="icon danger" Command="{Binding DeleteCommand}" ToolTip.Tip="Delete entry">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
+                        </Button>
+                        <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" />
+                        <Button Grid.Column="3" Classes="accent" Content="Save" Command="{Binding SaveCommand}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- ============ Media types manager (overlay) ============ -->
         <Grid Grid.RowSpan="2" IsVisible="{Binding IsTypeManagerOpen}">
             <Border Background="#99000000" />
