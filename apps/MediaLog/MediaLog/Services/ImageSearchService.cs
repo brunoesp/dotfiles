@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json.Nodes;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,30 +23,37 @@ public static class ImageSearchService
 {
     private const int MaxResults = 30;
 
+    /// <summary>A slow source must not hold up the others.</summary>
+    private static readonly TimeSpan SourceTimeout = TimeSpan.FromSeconds(6);
+
     private enum Category { Film, Series, Anime, Book, Manga, Comic, Game, Music, Podcast, Audiobook, General }
 
-    public static async Task<IReadOnlyList<ImageResult>> SearchAsync(string query, MediaTypeInfo? type, CancellationToken ct)
+    /// <summary>
+    /// Queries all suitable sources in parallel and yields each source's results as soon as it
+    /// answers (fast sources first), de-duplicated and capped at <see cref="MaxResults"/>.
+    /// </summary>
+    public static async IAsyncEnumerable<IReadOnlyList<ImageResult>> SearchAsync(string query, MediaTypeInfo? type,
+        [EnumeratorCancellation] CancellationToken ct)
     {
         query = query.Trim();
         if (query.Length == 0)
-            return [];
+            yield break;
 
-        var sources = SourcesFor(CategoryOf(type));
-        var tasks = sources.Select(source => SafeAsync(source, query, ct)).ToList();
-        var lists = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-        // Interleave the sources so each one contributes to the top suggestions.
-        var results = new List<ImageResult>();
+        var tasks = SourcesFor(CategoryOf(type)).Select(source => SafeAsync(source, query, ct)).ToList();
         var seen = new HashSet<string>();
-        for (var i = 0; results.Count < MaxResults && lists.Any(l => i < l.Count); i++)
+        var total = 0;
+        await foreach (var task in Task.WhenEach(tasks).WithCancellation(ct).ConfigureAwait(false))
         {
-            foreach (var list in lists)
-            {
-                if (i < list.Count && seen.Add(list[i].Url))
-                    results.Add(list[i]);
-            }
+            var batch = (await task.ConfigureAwait(false))
+                .Where(r => seen.Add(r.Url))
+                .Take(MaxResults - total)
+                .ToList();
+            total += batch.Count;
+            if (batch.Count > 0)
+                yield return batch;
+            if (total >= MaxResults)
+                yield break;
         }
-        return results.Take(MaxResults).ToList();
     }
 
     private static Category CategoryOf(MediaTypeInfo? type)
@@ -84,9 +94,9 @@ public static class ImageSearchService
     {
         Category.Film => [ITunes("movie", "movie"), Wikipedia, TvMaze],
         Category.Series => [TvMaze, Wikipedia],
-        Category.Anime => [Jikan("anime"), TvMaze, Wikipedia],
+        Category.Anime => [AniList("ANIME"), Jikan("anime"), TvMaze, Wikipedia],
         Category.Book => [OpenLibrary, ITunes("ebook", "ebook"), Wikipedia],
-        Category.Manga => [Jikan("manga"), OpenLibrary, Wikipedia],
+        Category.Manga => [AniList("MANGA"), Jikan("manga"), OpenLibrary, Wikipedia],
         Category.Comic => [OpenLibrary, Wikipedia],
         Category.Game => [Wikipedia, WikipediaWith("video game")],
         Category.Music => [ITunes("music", "album"), Wikipedia],
@@ -97,12 +107,15 @@ public static class ImageSearchService
 
     private static async Task<List<ImageResult>> SafeAsync(Source source, string query, CancellationToken ct)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(SourceTimeout);
         try
         {
-            return await source(query, ct).ConfigureAwait(false);
+            return await source(query, timeout.Token).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
+            // Failed or too slow: skip this source.
             return [];
         }
     }
@@ -195,6 +208,34 @@ public static class ImageSearchService
         }
         return results;
     }
+
+    // --- AniList: anime and manga covers (fast GraphQL API) --------------------------------
+
+    private static Source AniList(string kind) => async (query, ct) =>
+    {
+        const string gql = "query($s:String,$t:MediaType){Page(perPage:15){media(search:$s,type:$t){title{romaji english} coverImage{extraLarge large}}}}";
+        var body = new JsonObject
+        {
+            ["query"] = gql,
+            ["variables"] = new JsonObject { ["s"] = query, ["t"] = kind },
+        };
+        using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+        using var response = await Web.Http.PostAsync("https://graphql.anilist.co", content, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+        var results = new List<ImageResult>();
+        foreach (var item in doc.RootElement.GetProperty("data").GetProperty("Page").GetProperty("media").EnumerateArray())
+        {
+            var cover = item.GetProperty("coverImage");
+            if ((Str(cover, "extraLarge") ?? Str(cover, "large")) is { } src)
+            {
+                var title = item.GetProperty("title");
+                results.Add(new ImageResult(src, Str(title, "english") ?? Str(title, "romaji") ?? query, "AniList"));
+            }
+        }
+        return results;
+    };
 
     // --- Jikan (MyAnimeList): anime and manga ----------------------------------------------
 

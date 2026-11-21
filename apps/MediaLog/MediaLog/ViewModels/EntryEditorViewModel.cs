@@ -147,14 +147,17 @@ public partial class EntryEditorViewModel : ViewModelBase
         SearchStatus = null;
         try
         {
-            var results = await ImageSearchService.SearchAsync(SearchQuery, Type, cts.Token);
-            if (cts.IsCancellationRequested)
-                return;
-            foreach (var result in results)
-                Results.Add(new ImageResultViewModel(result));
-            SearchStatus = results.Count == 0
-                ? "No images found. Try a different search, or check your internet connection."
-                : $"{results.Count} suggestions. Tap one to use it.";
+            // Show each source's suggestions as soon as they arrive.
+            await foreach (var batch in ImageSearchService.SearchAsync(SearchQuery, Type, cts.Token))
+            {
+                if (cts.IsCancellationRequested)
+                    return;
+                foreach (var result in batch)
+                    Results.Add(new ImageResultViewModel(result));
+                SearchStatus = $"{Results.Count} suggestions. Tap one to use it.";
+            }
+            if (!cts.IsCancellationRequested && Results.Count == 0)
+                SearchStatus = "No images found. Try a different search, or check your internet connection.";
         }
         catch (OperationCanceledException)
         {

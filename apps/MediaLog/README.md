@@ -29,7 +29,8 @@ documentaries, audiobooks…
   suggestions to pick from (or paste any image link). Covers show in tiles mode and as the entry badge,
   and are cached on disk so they work offline.
   Image sources (free, no API keys), chosen by type: Wikipedia, TVmaze (series), Open Library (books),
-  iTunes (albums, podcasts, audiobooks, ebooks, movies), Jikan/MyAnimeList (anime, manga).
+  iTunes (albums, podcasts, audiobooks, ebooks, movies), AniList and Jikan/MyAnimeList (anime, manga).
+  Results appear as each source answers; a source that takes over 6 s is skipped.
 
   ![editor](docs/editor.png)
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice
