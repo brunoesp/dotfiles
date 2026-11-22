@@ -44,6 +44,9 @@ public static class MetadataService
         string? platform, [EnumeratorCancellation] CancellationToken ct)
     {
         query = query.Trim();
+        // A year typed with the title ("verity 2026") ranks matches from that year first
+        // instead of being searched for as part of the title.
+        (query, var year) = TitleMatch.SplitYear(query);
         if (query.Length < 2)
             yield break;
 
@@ -58,7 +61,8 @@ public static class MetadataService
         await foreach (var task in Task.WhenEach(tasks).WithCancellation(ct).ConfigureAwait(false))
         {
             var batch = (await task.ConfigureAwait(false))
-                .OrderByDescending(s => Math.Round(TitleMatch.Score(s.Title, query), 1)) // stable: keeps each source's order on ties
+                .OrderByDescending(s => year is not null && s.Year == year)
+                .ThenByDescending(s => Math.Round(TitleMatch.Score(s.Title, query), 1)) // stable: keeps each source's order on ties
                 .Where(s => seen.Add($"{s.Title}|{s.Year}"))
                 .Take(Math.Min(perSource, MaxResults - total))
                 .ToList();
@@ -165,8 +169,9 @@ public static class MetadataService
     private static async Task<List<MediaSuggestion>> SafeAsync(Source source, string query, CancellationToken ct)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        // Background refreshes may wait out rate limits; lookups while typing must stay quick.
-        timeout.CancelAfter(Wikimedia.Patient ? TimeSpan.FromSeconds(90) : SourceTimeout);
+        // Background refreshes may wait out Wikimedia's rate limits; every other source (and any
+        // lookup while typing) is skipped after a few seconds so a slow one can't hold things up.
+        timeout.CancelAfter(Wikimedia.Patient && IsWikimedia(source) ? TimeSpan.FromSeconds(60) : SourceTimeout);
         try
         {
             return await source(query, timeout.Token).ConfigureAwait(false);
@@ -225,29 +230,58 @@ public static class MetadataService
 
     private static readonly HashSet<string> GameClasses = ["Q7889", "Q21125433", "Q865493", "Q4393107", "Q64170203"];
 
-    private static Source Wikidata(WikidataKind kind) => async (query, ct) =>
+    /// <summary>One Wikidata source per kind (cached, so it can be recognised as rate-limited).</summary>
+    private static readonly Dictionary<WikidataKind, Source> WikidataSources = new();
+
+    private static Source Wikidata(WikidataKind kind)
+    {
+        lock (WikidataSources)
+        {
+            if (!WikidataSources.TryGetValue(kind, out var source))
+                WikidataSources[kind] = source = WikidataSource(kind);
+            return source;
+        }
+    }
+
+    private static bool IsWikimedia(Source source)
+    {
+        lock (WikidataSources)
+            return WikidataSources.ContainsValue(source);
+    }
+
+    private static Source WikidataSource(WikidataKind kind) => async (query, ct) =>
     {
         const string api = "https://www.wikidata.org/w/api.php?format=json&origin=*";
-        // 1. The label search: best for titles typed from the start, and cheap.
-        // 2. Only if no label matches the typed words well: a full-text search, so any words of the
-        //    title match in any order ("a link to the past"), restricted to films / video games where
-        //    that applies. Fewer requests also means fewer rate limits from Wikimedia.
-        var labelHits = await SearchIdsAsync(
+        // Two searches:
+        //  • full-text restricted to films / video games (any words, any order: "a link to the past";
+        //    and a film called "Verity" isn't crowded out by people, ships and novels of that name);
+        //  • the label search (best for titles typed from the start, e.g. while typing).
+        // Films / games: the restricted search first, the label one only if it finds nothing that
+        // matches well. Other kinds: the label search first. Fewer requests = fewer rate limits.
+        var kindClasses = kind switch { WikidataKind.Film => FilmClasses, WikidataKind.Game => GameClasses, _ => null };
+        Task<List<(string Id, string? Label, string? Description)>> FullText() => SearchIdsAsync(
+            $"{api}&action=query&list=search&srnamespace=0&srlimit=10&srprop=&srsearch=" +
+            Uri.EscapeDataString(TitleMatch.FullTextQuery(query) +
+                (kindClasses is null ? "" : " haswbstatement:" + string.Join('|', kindClasses.Select(c => "P31=" + c)))),
+            doc => doc.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
+                .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null)), ct);
+        Task<List<(string Id, string? Label, string? Description)>> Labels() => SearchIdsAsync(
             $"{api}&action=wbsearchentities&type=item&language=en&uselang=en&limit=10&search={Uri.EscapeDataString(query)}",
             doc => doc.RootElement.GetProperty("search").EnumerateArray()
-                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description"))), ct)
-            .ConfigureAwait(false);
-        var fullTextHits = new List<(string Id, string? Label, string? Description)>();
-        if (!labelHits.Any(h => h.Label is { } l && TitleMatch.Score(l, query) >= 0.9))
+                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description"))), ct);
+
+        List<(string Id, string? Label, string? Description)> fullTextHits, labelHits;
+        if (kindClasses is not null)
         {
-            var kindClasses = kind switch { WikidataKind.Film => FilmClasses, WikidataKind.Game => GameClasses, _ => null };
-            var fullText = TitleMatch.FullTextQuery(query) +
-                           (kindClasses is null ? "" : " haswbstatement:" + string.Join('|', kindClasses.Select(c => "P31=" + c)));
-            fullTextHits = await SearchIdsAsync(
-                $"{api}&action=query&list=search&srnamespace=0&srlimit=10&srprop=&srsearch={Uri.EscapeDataString(fullText)}",
-                doc => doc.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
-                    .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null)), ct)
-                .ConfigureAwait(false);
+            fullTextHits = await FullText().ConfigureAwait(false);
+            // Full-text hits carry no labels yet: run the label search too unless there are plenty.
+            labelHits = fullTextHits.Count >= 3 ? [] : await Labels().ConfigureAwait(false);
+        }
+        else
+        {
+            labelHits = await Labels().ConfigureAwait(false);
+            fullTextHits = labelHits.Any(h => h.Label is { } l && TitleMatch.Score(l, query) >= 0.9)
+                ? [] : await FullText().ConfigureAwait(false);
         }
         var hits = fullTextHits.Concat(labelHits)
             .Where(h => h.Id is { Length: > 1 } && h.Id[0] == 'Q')

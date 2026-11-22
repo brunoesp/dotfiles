@@ -635,7 +635,7 @@ public partial class MainViewModel : ViewModelBase
         var lastRedraw = System.Diagnostics.Stopwatch.StartNew();
         // Several entries at a time: fast sources (AniList, TVmaze, iTunes, box art) run alongside
         // the throttled Wikidata / Wikipedia requests instead of waiting for them.
-        using var slots = new System.Threading.SemaphoreSlim(4);
+        using var slots = new System.Threading.SemaphoreSlim(6);
         try
         {
             var tasks = entries.Select(async entry =>
@@ -701,9 +701,34 @@ public partial class MainViewModel : ViewModelBase
                 && (!wantsCredits || entry.Credits is { Count: > 0 }) && (!wantsPlatform || entry.Platform is not null)))
             return false;
 
+        // Retro games: the console's box art is looked up at the same time as the title.
+        var boxArtTask = entry.ImageUrl is null && wantsPlatform && Services.Platforms.BoxArtRepo(entry.Platform) is { } knownRepo
+            ? Services.RetroBoxArt.SearchAsync(entry.Name, knownRepo, ct)
+            : null;
+
+        // All sources are asked at once; stop waiting for the slower ones as soon as one gives a
+        // clear match (same title, with year and creator) — games / films are completed below anyway.
         var candidates = new List<MediaSuggestion>();
-        await foreach (var batch in MetadataService.SuggestAsync(entry.Name, type, entry.Platform, ct))
-            candidates.AddRange(batch);
+        using (var lookup = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(ct))
+        {
+            try
+            {
+                await foreach (var batch in MetadataService.SuggestAsync(entry.Name, type, entry.Platform, lookup.Token))
+                {
+                    candidates.AddRange(batch);
+                    if (batch.Any(c => c.Year is not null && c.Creator is not null
+                                       && Services.TitleMatch.Score(c.Title, entry.Name) >= 0.99
+                                       && Services.TitleMatch.Score(entry.Name, c.Title) >= 0.99))
+                    {
+                        lookup.Cancel();
+                        break;
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+            }
+        }
 
         // A match must contain all the entry's words ("Frieren" → "Frieren: Beyond Journey's End");
         // among those, prefer the closest title, the same year and richer details.
@@ -752,10 +777,15 @@ public partial class MainViewModel : ViewModelBase
             changed = true;
         }
         var cover = best.ImageUrl;
-        // Retro games: once the console is known, its box art is the best cover.
-        if (entry.ImageUrl is null && wantsPlatform && Services.Platforms.BoxArtRepo(entry.Platform) is { } repo)
+        // Retro games: the console's box art is the best cover (looked up in parallel above, or now
+        // if the console only became known from this lookup).
+        if (entry.ImageUrl is null && wantsPlatform)
         {
-            var boxArt = await Services.RetroBoxArt.SearchAsync(best.Title, repo, ct);
+            var boxArt = boxArtTask is not null
+                ? await boxArtTask
+                : Services.Platforms.BoxArtRepo(entry.Platform) is { } repo
+                    ? await Services.RetroBoxArt.SearchAsync(best.Title, repo, ct)
+                    : [];
             cover = boxArt.FirstOrDefault()?.Url ?? cover;
         }
         if (entry.ImageUrl is null && cover is { } url)

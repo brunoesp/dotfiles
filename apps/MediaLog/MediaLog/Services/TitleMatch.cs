@@ -75,6 +75,27 @@ public static class TitleMatch
     }
 
     /// <summary>
+    /// Separates a year typed with a title: "verity 2026" → ("verity", 2026). A title that is only
+    /// a number ("1917", "2001") is left alone.
+    /// </summary>
+    public static (string Title, int? Year) SplitYear(string query)
+    {
+        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (words.Count < 2)
+            return (query, null);
+        for (var i = words.Count - 1; i >= 0; i--)
+        {
+            var w = words[i].Trim('(', ')', '[', ']', ',');
+            if (w.Length == 4 && int.TryParse(w, out var y) && y is >= 1870 and <= 2100)
+            {
+                words.RemoveAt(i);
+                return (string.Join(' ', words), y);
+            }
+        }
+        return (query, null);
+    }
+
+    /// <summary>
     /// Full-text search text for the Wikimedia search engine. Whole words only: wildcards don't
     /// combine reliably with the type filter there. A short last word is probably still being
     /// typed, so it's left out ("a link to the pa" → "a link to the"); the label search that runs

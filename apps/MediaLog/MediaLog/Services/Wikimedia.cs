@@ -19,7 +19,14 @@ public static class Wikimedia
     private static readonly Dictionary<string, (DateTime Expires, string Body)> Cache = new();
     private static DateTime _next = DateTime.MinValue;
 
-    private static readonly TimeSpan Spacing = TimeSpan.FromMilliseconds(150);
+    /// <summary>
+    /// Gap between requests: starts at 150 ms, doubles (up to 2 s) whenever Wikimedia says
+    /// "too many requests" and eases back down while requests succeed, so a busy period slows the
+    /// app down a little instead of triggering a stream of refusals that stall everything.
+    /// </summary>
+    private static TimeSpan _spacing = MinSpacing;
+    private static readonly TimeSpan MinSpacing = TimeSpan.FromMilliseconds(150);
+    private static readonly TimeSpan MaxSpacing = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(30);
 
     private static readonly AsyncLocal<bool> PatientFlag = new();
@@ -55,7 +62,7 @@ public static class Wikimedia
                 {
                     var now = DateTime.UtcNow;
                     var start = _next > now ? _next : now;
-                    _next = start + Spacing;
+                    _next = start + _spacing;
                     wait = start - now;
                 }
                 if (wait > TimeSpan.Zero)
@@ -69,13 +76,18 @@ public static class Wikimedia
                     if (retry > cap)
                         retry = cap;
                     lock (Lock)
+                    {
                         _next = DateTime.UtcNow + retry; // slow everyone down, not just this request
+                        _spacing = TimeSpan.FromTicks(Math.Min(MaxSpacing.Ticks, _spacing.Ticks * 2));
+                    }
                     continue;
                 }
                 response.EnsureSuccessStatusCode();
                 var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 lock (Lock)
                 {
+                    // Success: ease the gap back towards the minimum.
+                    _spacing = TimeSpan.FromTicks(Math.Max(MinSpacing.Ticks, (long)(_spacing.Ticks * 0.9)));
                     if (Cache.Count > 400)
                         Cache.Clear();
                     Cache[url] = (DateTime.UtcNow + CacheFor, body);
