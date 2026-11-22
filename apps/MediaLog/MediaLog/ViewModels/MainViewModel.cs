@@ -52,7 +52,7 @@ public partial class MainViewModel : ViewModelBase
         NewType = Types[0];
         NewDate = DateTime.Today;
         NewCover = CreateNewCover();
-        NewSuggestions = new TitleSuggestionsViewModel(() => NewType, ApplyNewSuggestion);
+        NewSuggestions = new TitleSuggestionsViewModel(() => NewType, () => NewPlatform, ApplyNewSuggestion);
         SyncYearLists();
         SelectedNav = CurrentYearList;
         StartNewType();
@@ -172,6 +172,13 @@ public partial class MainViewModel : ViewModelBase
     public partial string NewPlatform { get; set; } = "";
 
     public bool IsNewGame => Services.MediaCategories.Of(NewType) == Services.MediaCategory.Game;
+
+    partial void OnNewPlatformChanged(string value)
+    {
+        // A retro console adds its box-art titles to the lookup: refresh open suggestions.
+        if (NewSuggestions is { IsOpen: true })
+            NewSuggestions.Update(NewName);
+    }
 
     // ==========================================================================
     // Per-type lists under "All media"

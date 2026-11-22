@@ -33,7 +33,7 @@ public partial class EntryEditorViewModel : ViewModelBase
         Creator = entry.Model.Creator ?? "";
         Length = entry.Model.Length ?? "";
         Cover = new CoverPickerViewModel(entry.Model.ImageUrl, entry.Image, entry.Model.Name, () => Type, () => PlatformText);
-        Suggestions = new TitleSuggestionsViewModel(() => Type, ApplySuggestion);
+        Suggestions = new TitleSuggestionsViewModel(() => Type, () => PlatformText, ApplySuggestion);
         // No cover yet: start suggesting right away.
         if (!Cover.HasImage)
             Cover.SearchIfIdle();

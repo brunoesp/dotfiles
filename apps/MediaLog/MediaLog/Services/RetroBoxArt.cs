@@ -104,6 +104,23 @@ public static partial class RetroBoxArt
         return await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
     }
 
+    /// <summary>"Legend of Zelda, The - A Link to the Past (USA)" → "The Legend of Zelda: A Link to the Past".</summary>
+    public static string DisplayTitle(string fileTitle)
+    {
+        var bare = Tags().Replace(fileTitle, "").Trim();
+        var article = Regex.Match(bare, @"^(.*?), (The|A|An)( - .*)?$");
+        if (article.Success)
+            bare = $"{article.Groups[2].Value} {article.Groups[1].Value}{article.Groups[3].Value}";
+        return bare.Replace(" - ", ": ");
+    }
+
+    /// <summary>"Super Mario World (USA)" → "USA".</summary>
+    public static string? Region(string fileTitle)
+    {
+        var m = Regex.Match(fileTitle, @"\(([^)]*)\)");
+        return m.Success ? m.Groups[1].Value : null;
+    }
+
     // --- matching ---------------------------------------------------------------------
 
     [GeneratedRegex(@"\s*[\(\[][^\)\]]*[\)\]]")]

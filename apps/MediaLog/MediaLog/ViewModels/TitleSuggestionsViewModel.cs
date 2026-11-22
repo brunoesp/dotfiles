@@ -53,12 +53,14 @@ public partial class TitleSuggestionsViewModel : ViewModelBase
     private static readonly TimeSpan Debounce = TimeSpan.FromMilliseconds(400);
 
     private readonly Func<MediaTypeInfo?> _type;
+    private readonly Func<string?> _platform;
     private readonly Action<MediaSuggestion, Bitmap?> _picked;
     private CancellationTokenSource? _cts;
 
-    public TitleSuggestionsViewModel(Func<MediaTypeInfo?> type, Action<MediaSuggestion, Bitmap?> picked)
+    public TitleSuggestionsViewModel(Func<MediaTypeInfo?> type, Func<string?> platform, Action<MediaSuggestion, Bitmap?> picked)
     {
         _type = type;
+        _platform = platform;
         _picked = picked;
     }
 
@@ -111,7 +113,7 @@ public partial class TitleSuggestionsViewModel : ViewModelBase
             HasItems = false;
             IsLoading = true;
             IsOpen = true;
-            await foreach (var batch in MetadataService.SuggestAsync(text, _type(), cts.Token))
+            await foreach (var batch in MetadataService.SuggestAsync(text, _type(), _platform(), cts.Token))
             {
                 if (cts.IsCancellationRequested)
                     return;

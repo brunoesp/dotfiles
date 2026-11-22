@@ -39,14 +39,17 @@ public static class MetadataService
     private delegate Task<List<MediaSuggestion>> Source(string query, CancellationToken ct);
 
     /// <summary>Yields suggestions as each source answers (best source first when they're equally fast).</summary>
+    /// <param name="platform">Console of a game: retro consoles also search the libretro box-art titles.</param>
     public static async IAsyncEnumerable<IReadOnlyList<MediaSuggestion>> SuggestAsync(string query, MediaTypeInfo? type,
-        [EnumeratorCancellation] CancellationToken ct)
+        string? platform, [EnumeratorCancellation] CancellationToken ct)
     {
         query = query.Trim();
         if (query.Length < 2)
             yield break;
 
         var sources = SourcesFor(MediaCategories.Of(type));
+        if (MediaCategories.Of(type) == MediaCategory.Game && Platforms.BoxArtRepo(platform) is { } repo)
+            sources = [.. sources, RetroTitles(repo, platform!)];
         var tasks = sources.Select(s => SafeAsync(s, query, ct)).ToList();
         // With several sources, cap each so a fast one doesn't crowd out the others.
         var perSource = sources.Length > 1 ? 5 : MaxResults;
@@ -161,18 +164,36 @@ public static class MetadataService
     private static Source Wikidata(WikidataKind kind) => async (query, ct) =>
     {
         const string api = "https://www.wikidata.org/w/api.php?format=json&origin=*";
-        using var search = await GetJsonAsync(
-            $"{api}&action=wbsearchentities&type=item&language=en&uselang=en&limit=12&search={Uri.EscapeDataString(query)}", ct)
-            .ConfigureAwait(false);
-        var hits = search.RootElement.GetProperty("search").EnumerateArray()
-            .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label") ?? query, Description: Str(h, "description")))
-            .Where(h => h.Id is not null)
-            .ToList();
+        List<(string Id, string? Label, string? Description)> hits;
+        if (kind == WikidataKind.Game)
+        {
+            // Full-text search restricted to video games: any words of the title match
+            // ("zelda link to the past"), unlike the label-prefix entity search.
+            var filter = string.Join('|', GameClasses.Select(c => "P31=" + c));
+            using var search = await GetJsonAsync(
+                $"{api}&action=query&list=search&srnamespace=0&srlimit=12&srprop=" +
+                $"&srsearch={Uri.EscapeDataString($"{query} haswbstatement:{filter}")}", ct).ConfigureAwait(false);
+            hits = search.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
+                .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null))
+                .Where(h => h.Id is not null)
+                .ToList();
+        }
+        else
+        {
+            using var search = await GetJsonAsync(
+                $"{api}&action=wbsearchentities&type=item&language=en&uselang=en&limit=12&search={Uri.EscapeDataString(query)}", ct)
+                .ConfigureAwait(false);
+            hits = search.RootElement.GetProperty("search").EnumerateArray()
+                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description")))
+                .Where(h => h.Id is not null)
+                .ToList();
+        }
         if (hits.Count == 0)
             return [];
 
         using var entities = await GetJsonAsync(
-            $"{api}&action=wbgetentities&props=claims|sitelinks&sitefilter=enwiki&ids={string.Join('|', hits.Select(h => h.Id))}", ct)
+            $"{api}&action=wbgetentities&props=claims|sitelinks|labels|descriptions&languages=en&sitefilter=enwiki" +
+            $"&ids={string.Join('|', hits.Select(h => h.Id))}", ct)
             .ConfigureAwait(false);
         var all = entities.RootElement.GetProperty("entities");
 
@@ -188,6 +209,10 @@ public static class MetadataService
         {
             if (!all.TryGetProperty(hit.Id, out var entity) || !entity.TryGetProperty("claims", out var claims))
                 continue;
+            var label = hit.Label ?? EnglishText(entity, "labels");
+            if (label is null)
+                continue;
+            var description = hit.Description ?? EnglishText(entity, "descriptions");
             var classes = ItemIds(claims, "P31");
             var creatorId = creatorProps.Select(p => ItemIds(claims, p).FirstOrDefault()).FirstOrDefault(id => id is not null);
             var matches = kind switch
@@ -212,7 +237,7 @@ public static class MetadataService
             if (entity.TryGetProperty("sitelinks", out var links) && links.TryGetProperty("enwiki", out var enwiki))
                 article = Str(enwiki, "title");
             var platformId = kind == WikidataKind.Game ? ItemIds(claims, "P400").FirstOrDefault() : null;
-            items.Add((hit.Label, hit.Description, year, creatorId, length, article, platformId));
+            items.Add((label, description, year, creatorId, length, article, platformId));
         }
         if (items.Count == 0)
             return [];
@@ -241,6 +266,9 @@ public static class MetadataService
                 i.PlatformId is { } p ? names.GetValueOrDefault(p) : null))
             .ToList();
     };
+
+    private static string? EnglishText(JsonElement entity, string property) =>
+        entity.TryGetProperty(property, out var values) && values.TryGetProperty("en", out var en) ? Str(en, "value") : null;
 
     private static IEnumerable<JsonElement> Statements(JsonElement claims, string property)
     {
@@ -312,6 +340,16 @@ public static class MetadataService
         }
         return result;
     }
+
+    // --- libretro box art: retro game titles for the chosen console --------------------------
+
+    private static Source RetroTitles(string repo, string platform) => async (query, ct) =>
+        (await RetroBoxArt.SearchAsync(query, repo, ct).ConfigureAwait(false))
+            .Select(r => new MediaSuggestion(RetroBoxArt.DisplayTitle(r.Title), null, null, null, r.Url, "libretro",
+                RetroBoxArt.Region(r.Title), platform))
+            .GroupBy(s => s.Title, StringComparer.OrdinalIgnoreCase) // one per title (best region first)
+            .Select(g => g.First())
+            .ToList();
 
     // --- TVmaze: TV series ------------------------------------------------------------------
 

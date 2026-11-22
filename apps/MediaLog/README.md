@@ -37,8 +37,9 @@ documentaries, audiobooks…
 - **Editing** – the **Edit** button at the top shows edit / delete buttons on every entry (hidden
   otherwise); the pencil opens an editor for title, type, date and list (moving it
   between lists), plus a **cover image**: *Find images* searches online by title and shows a grid of
-  suggestions to pick from (or paste any image link). Covers show in tiles mode (2:3 posters and book covers, 1:1 for albums and podcasts with a roomier
-  info layout) and as the entry badge,
+  suggestions to pick from (or paste any image link). Covers show in tiles mode — the tile follows the chosen image: 1:1 for square-ish art (albums,
+  podcasts, most retro game boxes, with a roomier info layout) and 2:3 for posters and book covers —
+  and as the entry badge,
   and are cached on disk so they work offline.
   Image sources (free, no API keys), chosen by type: Wikipedia, TVmaze (series), Open Library (books),
   iTunes (albums, podcasts, audiobooks, ebooks, movies), AniList and Jikan/MyAnimeList (anime, manga).
@@ -48,7 +49,9 @@ documentaries, audiobooks…
 - **Consoles** – games have a console field (with suggestions; typing an unknown console adds it).
   Each console shows as a small badge in its own color (SNES purple, Genesis blue, NES red, PS5…).
   Covers for retro games (NES, SNES, N64, Game Boy, Genesis, Atari 2600, PlayStation, Xbox…) come from
-  the [libretro-thumbnails](https://github.com/libretro-thumbnails) box-art collection for that console.
+  the [libretro-thumbnails](https://github.com/libretro-thumbnails) box-art collection for that console,
+  which is also searched for title suggestions once a retro console is set. Game titles are looked up
+  with a full-text Wikidata search, so any words of the title match.
 
   ![games](docs/games.png)
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice

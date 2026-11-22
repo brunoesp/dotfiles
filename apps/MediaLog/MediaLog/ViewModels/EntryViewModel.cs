@@ -40,6 +40,8 @@ public partial class EntryViewModel : ViewModelBase
 
     public bool HasPlatform => Platform is not null;
 
+    public bool HasDetailsOrPlatform => HasDetails || HasPlatform;
+
     /// <summary>Whether the owning list name is shown (when it differs from the list being viewed).</summary>
     public bool ShowList { get; }
 
@@ -61,8 +63,23 @@ public partial class EntryViewModel : ViewModelBase
 
     public bool HasYearAndLength => YearAndLength.Length > 0;
 
-    /// <summary>Albums and podcasts have square artwork; everything else uses 2:3 posters / covers.</summary>
-    public bool IsSquareCover => MediaCategories.Of(Type) is MediaCategory.Music or MediaCategory.Podcast;
+    /// <summary>
+    /// Tile shape: follows the chosen image (square-ish art such as album covers or retro game
+    /// boxes → 1:1, tall posters / book covers → 2:3); without an image, albums and podcasts
+    /// are square and everything else 2:3.
+    /// </summary>
+    public bool IsSquareCover
+    {
+        get
+        {
+            if (Image is { PixelSize: { Width: > 0, Height: > 0 } size })
+            {
+                // Closest of 1:1 and 2:3 (compared on a log scale: the midpoint is √1.5 ≈ 1.22).
+                return (double)size.Height / size.Width < 1.22;
+            }
+            return MediaCategories.Of(Type) is MediaCategory.Music or MediaCategory.Podcast;
+        }
+    }
 
     /// <summary>Cover height ÷ width for tiles.</summary>
     public double CoverRatio => IsSquareCover ? 1.0 : 1.5;
@@ -75,7 +92,7 @@ public partial class EntryViewModel : ViewModelBase
 
     /// <summary>Cover image, once downloaded (or from cache).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio))]
     public partial Bitmap? Image { get; set; }
 
     public bool HasImage => Image is not null;
