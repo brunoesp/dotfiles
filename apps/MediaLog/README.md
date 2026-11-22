@@ -34,7 +34,8 @@ documentaries, audiobooks…
 - **All media (master list)** – every entry from every list, with the **total count** and a color‑coded counter per type.
   The arrow next to it expands one list per type (only types with entries). **Pin** a type list to keep
   it in the sidebar even when "All media" is collapsed.
-- **Editing** – the pencil on any entry opens an editor for title, type, date and list (moving it
+- **Editing** – the **Edit** button at the top shows edit / delete buttons on every entry (hidden
+  otherwise); the pencil opens an editor for title, type, date and list (moving it
   between lists), plus a **cover image**: *Find images* searches online by title and shows a grid of
   suggestions to pick from (or paste any image link). Covers show in tiles mode (2:3 posters and book covers, 1:1 for albums and podcasts with a roomier
   info layout) and as the entry badge,

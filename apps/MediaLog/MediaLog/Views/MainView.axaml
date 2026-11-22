@@ -130,6 +130,13 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Classes="editToggle" Classes.active="{Binding IsEditMode}" Command="{Binding ToggleEditModeCommand}"
+                            IsVisible="{Binding !IsConfirmingDelete}" ToolTip.Tip="Show edit / delete buttons on entries">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:StrokeIcon Data="{Binding EditModeIcon}" Width="15" Height="15" />
+                            <TextBlock Text="{Binding EditModeText}" VerticalAlignment="Center" FontSize="13" />
+                        </StackPanel>
+                    </Button>
                     <Border Classes="segmented" IsVisible="{Binding !IsConfirmingDelete}">
                         <StackPanel Orientation="Horizontal">
                             <Button Classes="seg" Classes.active="{Binding IsCardsMode}" Command="{Binding SetViewModeCommand}"
@@ -296,7 +303,7 @@
                                                     <TextBlock Classes="subtle" Text="{Binding List.Name}" FontSize="12" IsVisible="{Binding ShowList}" />
                                                 </WrapPanel>
                                             </StackPanel>
-                                            <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="4,0,8,0">
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="4,0,8,0" IsVisible="{Binding ShowActions}">
                                                 <Button Classes="icon" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
                                                     <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" />
                                                 </Button>
@@ -336,7 +343,8 @@
                                                 </Panel>
                                             </Border>
                                             </c:AspectBox>
-                                            <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                                            <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                                                    IsVisible="{Binding ShowActions}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Button Classes="icon tileButton" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry / choose image">
                                                         <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Foreground="White" Width="15" Height="15" />
@@ -366,16 +374,23 @@
                                                                TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
                                             </DockPanel>
-                                            <StackPanel Grid.Row="1" Margin="10,8,10,10" Spacing="2" IsVisible="{Binding !IsSquareCover}">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
-                                                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
-                                                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
-                                                <TextBlock Classes="subtle" FontSize="11" Text="{Binding DateText}" />
-                                                <TextBlock Classes="subtle" FontSize="11" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
+                                            <DockPanel Grid.Row="1" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
+                                                <StackPanel DockPanel.Dock="Bottom" Spacing="1" Margin="0,6,0,0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
+                                                        <TextBlock Classes="subtle" FontSize="11" Text="·" />
+                                                        <TextBlock Classes="subtle" FontSize="11" Text="{Binding DateText}" />
+                                                    </StackPanel>
+                                                    <TextBlock Classes="subtle" FontSize="11" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
+                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </DockPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -405,7 +420,7 @@
                                                        FontSize="11" VerticalAlignment="Center" Margin="8,0" Classes="compactType" />
                                             <TextBlock Grid.Column="3" Classes="subtle" Text="{Binding DateText}" FontSize="12" VerticalAlignment="Center"
                                                        MinWidth="78" TextAlignment="Right" />
-                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,6,0">
+                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,6,0" IsVisible="{Binding ShowActions}">
                                                 <Button Classes="icon" Padding="6" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
                                                     <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Width="15" Height="15" />
                                                 </Button>

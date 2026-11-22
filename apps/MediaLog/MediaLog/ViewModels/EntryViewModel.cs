@@ -63,6 +63,10 @@ public partial class EntryViewModel : ViewModelBase
 
     public string DateText => Model.CompletedOn.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
 
+    /// <summary>Edit / delete buttons are only shown in edit mode.</summary>
+    [ObservableProperty]
+    public partial bool ShowActions { get; set; }
+
     /// <summary>Cover image, once downloaded (or from cache).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImage))]

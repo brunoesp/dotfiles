@@ -495,6 +495,27 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // ==========================================================================
+    // Edit mode
+    // ==========================================================================
+
+    /// <summary>When on, every entry shows its edit / delete buttons.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EditModeText), nameof(EditModeIcon))]
+    public partial bool IsEditMode { get; set; }
+
+    public string EditModeText => IsEditMode ? "Done" : "Edit";
+    public Geometry EditModeIcon => IsEditMode ? Controls.Icons.Check : Controls.Icons.Pencil;
+
+    [RelayCommand]
+    private void ToggleEditMode() => IsEditMode = !IsEditMode;
+
+    partial void OnIsEditModeChanged(bool value)
+    {
+        foreach (var entry in Entries)
+            entry.ShowActions = value;
+    }
+
+    // ==========================================================================
     // Entry editor
     // ==========================================================================
 
@@ -861,7 +882,8 @@ public partial class MainViewModel : ViewModelBase
 
             Entries.Clear();
             foreach (var (entry, list) in visible)
-                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor));
+                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor)
+                    { ShowActions = IsEditMode });
 
             var noun = ScopeCount == 1 ? "item" : "items";
             CountText = IsFiltered ? $"{visible.Count} of {ScopeCount} {noun}" : $"{ScopeCount} {noun}";
