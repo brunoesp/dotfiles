@@ -59,6 +59,10 @@ documentaries, audiobooks…
   of the typed words they contain.
 
   ![games](docs/games.png)
+- **Refresh all info** (sidebar) – looks every entry up online again and fills in what's missing
+  (year, creator, length, credits, console, cover) without changing anything already filled in;
+  shows progress and can be stopped. Wikimedia requests are throttled and cached, and a refresh
+  waits out rate limits instead of giving up.
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice
   is remembered per list.
 

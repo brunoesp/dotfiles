@@ -93,6 +93,8 @@ public static class ImageSearchService
 
     private static async Task<JsonDocument> GetJsonAsync(string url, CancellationToken ct)
     {
+        if (Wikimedia.Handles(url))
+            return JsonDocument.Parse(await Wikimedia.GetStringAsync(url, ct).ConfigureAwait(false));
         using var response = await Web.Http.GetAsync(url, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);

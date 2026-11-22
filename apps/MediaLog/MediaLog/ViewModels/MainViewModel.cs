@@ -597,6 +597,129 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // ==========================================================================
+    // Refresh info for all entries
+    // ==========================================================================
+
+    private System.Threading.CancellationTokenSource? _refreshCts;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RefreshAllInfoCommand))]
+    public partial bool IsRefreshing { get; set; }
+
+    /// <summary>Progress / result text; <c>null</c> hides the status bar.</summary>
+    [ObservableProperty]
+    public partial string? RefreshStatus { get; set; }
+
+    [ObservableProperty]
+    public partial double RefreshProgress { get; set; }
+
+    private bool CanRefreshAll() => !IsRefreshing;
+
+    /// <summary>
+    /// Looks every entry up online again and fills in what's missing (year, creator, length,
+    /// credits, console, cover). Nothing already filled in is changed.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRefreshAll))]
+    private async System.Threading.Tasks.Task RefreshAllInfo()
+    {
+        var cts = _refreshCts = new System.Threading.CancellationTokenSource();
+        var entries = AllEntries().Select(x => x.Entry).ToList();
+        IsRefreshing = true;
+        RefreshProgress = 0;
+        Services.Wikimedia.Patient = true; // background work: wait out rate limits instead of giving up
+        var updated = 0;
+        var done = 0;
+        try
+        {
+            foreach (var entry in entries)
+            {
+                cts.Token.ThrowIfCancellationRequested();
+                RefreshStatus = $"Refreshing info {done + 1} of {entries.Count}: {entry.Name}";
+                if (await RefreshEntryAsync(entry, cts.Token))
+                {
+                    updated++;
+                    Persist();
+                    Refresh();
+                }
+                done++;
+                RefreshProgress = (double)done / entries.Count;
+            }
+            RefreshStatus = $"Done: updated {updated} of {entries.Count} entries.";
+        }
+        catch (OperationCanceledException)
+        {
+            RefreshStatus = $"Stopped: updated {updated} of {done} entries checked.";
+        }
+        finally
+        {
+            IsRefreshing = false;
+            Services.Wikimedia.Patient = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelRefresh() => _refreshCts?.Cancel();
+
+    [RelayCommand]
+    private void DismissRefresh() => RefreshStatus = null;
+
+    private async System.Threading.Tasks.Task<bool> RefreshEntryAsync(MediaEntry entry, System.Threading.CancellationToken ct)
+    {
+        var type = TypeFor(entry.Kind);
+        var category = Services.MediaCategories.Of(type);
+        var wantsCredits = category is Services.MediaCategory.Game or Services.MediaCategory.Film;
+        var wantsPlatform = category == Services.MediaCategory.Game;
+        if (entry.Year is not null && entry.Creator is not null && entry.ImageUrl is not null
+            && (!wantsCredits || entry.Credits is { Count: > 0 }) && (!wantsPlatform || entry.Platform is not null))
+            return false; // nothing missing
+
+        var candidates = new List<MediaSuggestion>();
+        await foreach (var batch in MetadataService.SuggestAsync(entry.Name, type, entry.Platform, ct))
+            candidates.AddRange(batch);
+
+        // A match must contain all the entry's words ("Frieren" → "Frieren: Beyond Journey's End");
+        // among those, prefer the closest title, the same year and richer details.
+        var best = candidates
+            .Select(c => (Suggestion: c,
+                Forward: Services.TitleMatch.Score(c.Title, entry.Name),
+                Score: Services.TitleMatch.Score(c.Title, entry.Name) + Services.TitleMatch.Score(entry.Name, c.Title)
+                       + (entry.Year is { } y && c.Year == y ? 0.3 : 0)
+                       + (c.Year is not null || c.Creator is not null ? 0.05 : 0)))
+            .Where(x => x.Forward >= 0.95 && x.Score >= 1.25)
+            .OrderByDescending(x => x.Score)
+            .Select(x => x.Suggestion)
+            .FirstOrDefault();
+        if (best is null)
+            return false;
+        best = await MetadataService.EnrichAsync(best, type, ct);
+
+        var changed = false;
+        if (entry.Year is null && best.Year is { } year) { entry.Year = year; changed = true; }
+        if (entry.Creator is null && best.Creator is { } creator) { entry.Creator = creator; changed = true; }
+        if (entry.Length is null && best.Length is { } length) { entry.Length = length; changed = true; }
+        if (entry.Credits is not { Count: > 0 } && best.Credits is { Count: > 0 } credits) { entry.Credits = credits.ToList(); changed = true; }
+        if (wantsPlatform && entry.Platform is null && best.Platform is { } platform)
+        {
+            entry.Platform = EnsurePlatform(platform);
+            changed = true;
+        }
+        var cover = best.ImageUrl;
+        // Retro games: once the console is known, its box art is the best cover.
+        if (entry.ImageUrl is null && wantsPlatform && Services.Platforms.BoxArtRepo(entry.Platform) is { } repo)
+        {
+            var boxArt = await Services.RetroBoxArt.SearchAsync(best.Title, repo, ct);
+            cover = boxArt.FirstOrDefault()?.Url ?? cover;
+        }
+        if (entry.ImageUrl is null && cover is { } url)
+        {
+            entry.ImageUrl = url;
+            _ = ImageCache.SaveToDiskAsync(url);
+            changed = true;
+        }
+        return changed;
+    }
+
+    // ==========================================================================
     // Edit mode
     // ==========================================================================
 

@@ -37,7 +37,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto,Auto">
         <SplitView x:Name="Split"
                    IsPaneOpen="{Binding IsPaneOpen, Mode=TwoWay}"
                    DisplayMode="Inline"
@@ -55,6 +55,13 @@
 
                     <Border DockPanel.Dock="Bottom" Padding="16,12" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0">
                         <StackPanel Spacing="10">
+                        <Button Classes="navAction" Command="{Binding RefreshAllInfoCommand}" HorizontalAlignment="Stretch"
+                                ToolTip.Tip="Look up every entry online and fill in missing year, credits, covers…">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <c:StrokeIcon Data="{x:Static c:Icons.Refresh}" Width="18" Height="18" Foreground="{DynamicResource SubtleText}" />
+                                <TextBlock Text="Refresh all info" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="navAction" Command="{Binding OpenTypeManagerCommand}" HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <c:StrokeIcon Data="{x:Static c:Icons.Tag}" Width="18" Height="18" Foreground="{DynamicResource SubtleText}" />
@@ -484,8 +491,27 @@
             </Grid>
         </SplitView>
 
-        <!-- Undo bar -->
+        <!-- Refresh-all progress -->
         <Border Grid.Row="1" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}"
+                BorderThickness="0,1,0,0" Padding="16,8"
+                IsVisible="{Binding RefreshStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <c:StrokeIcon Data="{x:Static c:Icons.Refresh}" Width="18" Height="18" Foreground="{DynamicResource SubtleText}" />
+                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding RefreshStatus}" TextTrimming="CharacterEllipsis" />
+                    <ProgressBar Value="{Binding RefreshProgress}" Maximum="1" IsVisible="{Binding IsRefreshing}" />
+                </StackPanel>
+                <Panel Grid.Column="2">
+                    <Button Content="Stop" Command="{Binding CancelRefreshCommand}" IsVisible="{Binding IsRefreshing}" />
+                    <Button Classes="icon" Command="{Binding DismissRefreshCommand}" IsVisible="{Binding !IsRefreshing}">
+                        <c:StrokeIcon Data="{x:Static c:Icons.Close}" />
+                    </Button>
+                </Panel>
+            </Grid>
+        </Border>
+
+        <!-- Undo bar -->
+        <Border Grid.Row="2" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}"
                 BorderThickness="0,1,0,0" Padding="16,8"
                 IsVisible="{Binding UndoText, Converter={x:Static ObjectConverters.IsNotNull}}">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
@@ -497,7 +523,7 @@
             </Grid>
         </Border>
         <!-- ============ Cover for a new entry (overlay) ============ -->
-        <Grid Grid.RowSpan="2" IsVisible="{Binding IsNewCoverOpen}">
+        <Grid Grid.RowSpan="3" IsVisible="{Binding IsNewCoverOpen}">
             <Border Background="#99000000" />
             <Border Classes="card" MaxWidth="640" MaxHeight="820" Margin="12,24" Padding="0"
                     VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
@@ -529,7 +555,7 @@
         </Grid>
 
         <!-- ============ Edit entry (overlay) ============ -->
-        <Grid Grid.RowSpan="2" IsVisible="{Binding IsEditorOpen}">
+        <Grid Grid.RowSpan="3" IsVisible="{Binding IsEditorOpen}">
             <Border Background="#99000000" />
             <Border Classes="card" MaxWidth="640" MaxHeight="860" Margin="12,24" Padding="0"
                     VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000"
@@ -607,7 +633,7 @@
         </Grid>
 
         <!-- ============ Media types manager (overlay) ============ -->
-        <Grid Grid.RowSpan="2" IsVisible="{Binding IsTypeManagerOpen}">
+        <Grid Grid.RowSpan="3" IsVisible="{Binding IsTypeManagerOpen}">
             <Border Background="#99000000" />
             <Border Classes="card" MaxWidth="600" MaxHeight="820" Margin="12,24" Padding="0"
                     VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">

@@ -129,7 +129,8 @@ public static class MetadataService
     private static async Task<List<MediaSuggestion>> SafeAsync(Source source, string query, CancellationToken ct)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(SourceTimeout);
+        // Background refreshes may wait out rate limits; lookups while typing must stay quick.
+        timeout.CancelAfter(Wikimedia.Patient ? TimeSpan.FromSeconds(90) : SourceTimeout);
         try
         {
             return await source(query, timeout.Token).ConfigureAwait(false);
@@ -144,6 +145,8 @@ public static class MetadataService
 
     private static async Task<JsonDocument> GetJsonAsync(string url, CancellationToken ct)
     {
+        if (Wikimedia.Handles(url))
+            return JsonDocument.Parse(await Wikimedia.GetStringAsync(url, ct).ConfigureAwait(false));
         var response = await Web.Http.GetAsync(url, ct).ConfigureAwait(false);
         if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
         {
@@ -189,23 +192,28 @@ public static class MetadataService
     private static Source Wikidata(WikidataKind kind) => async (query, ct) =>
     {
         const string api = "https://www.wikidata.org/w/api.php?format=json&origin=*";
-        // Two searches in parallel:
-        //  • full-text, so any words of the title match in any order ("a link to the past"),
-        //    restricted to films / video games where that applies;
-        //  • the label search, which is best for titles typed from the start.
-        var kindClasses = kind switch { WikidataKind.Film => FilmClasses, WikidataKind.Game => GameClasses, _ => null };
-        var fullText = TitleMatch.FullTextQuery(query) +
-                       (kindClasses is null ? "" : " haswbstatement:" + string.Join('|', kindClasses.Select(c => "P31=" + c)));
-        var fullTextTask = SearchIdsAsync(
-            $"{api}&action=query&list=search&srnamespace=0&srlimit=10&srprop=&srsearch={Uri.EscapeDataString(fullText)}",
-            doc => doc.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
-                .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null)), ct);
-        var labelTask = SearchIdsAsync(
+        // 1. The label search: best for titles typed from the start, and cheap.
+        // 2. Only if no label matches the typed words well: a full-text search, so any words of the
+        //    title match in any order ("a link to the past"), restricted to films / video games where
+        //    that applies. Fewer requests also means fewer rate limits from Wikimedia.
+        var labelHits = await SearchIdsAsync(
             $"{api}&action=wbsearchentities&type=item&language=en&uselang=en&limit=10&search={Uri.EscapeDataString(query)}",
             doc => doc.RootElement.GetProperty("search").EnumerateArray()
-                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description"))), ct);
-        var both = await Task.WhenAll(fullTextTask, labelTask).ConfigureAwait(false);
-        var hits = both[0].Concat(both[1])
+                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description"))), ct)
+            .ConfigureAwait(false);
+        var fullTextHits = new List<(string Id, string? Label, string? Description)>();
+        if (!labelHits.Any(h => h.Label is { } l && TitleMatch.Score(l, query) >= 0.9))
+        {
+            var kindClasses = kind switch { WikidataKind.Film => FilmClasses, WikidataKind.Game => GameClasses, _ => null };
+            var fullText = TitleMatch.FullTextQuery(query) +
+                           (kindClasses is null ? "" : " haswbstatement:" + string.Join('|', kindClasses.Select(c => "P31=" + c)));
+            fullTextHits = await SearchIdsAsync(
+                $"{api}&action=query&list=search&srnamespace=0&srlimit=10&srprop=&srsearch={Uri.EscapeDataString(fullText)}",
+                doc => doc.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
+                    .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null)), ct)
+                .ConfigureAwait(false);
+        }
+        var hits = fullTextHits.Concat(labelHits)
             .Where(h => h.Id is { Length: > 1 } && h.Id[0] == 'Q')
             .DistinctBy(h => h.Id)
             .Take(15)
