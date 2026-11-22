@@ -552,7 +552,16 @@
                             </Border>
                             <Border Height="3" Background="{Binding Type.Brush}" />
                             <StackPanel Margin="20,14,20,8" Spacing="10">
-                                <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <!-- title, with the completion date featured on the right -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap"
+                                               VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding DateText}" FontSize="20" FontWeight="SemiBold"
+                                                   Foreground="{Binding Type.Brush}" HorizontalAlignment="Right" />
+                                        <TextBlock Text="completed" Classes="subtle" FontSize="11" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Grid>
                                 <WrapPanel ItemSpacing="8" LineSpacing="6">
                                     <Border Background="{Binding Type.SoftBrush}" CornerRadius="12" Padding="10,3">
                                         <StackPanel Orientation="Horizontal" Spacing="6">

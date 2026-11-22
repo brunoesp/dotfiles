@@ -45,7 +45,11 @@ public partial class EntryViewModel : ViewModelBase
     public bool HasDetailsOrPlatform => HasDetails || HasPlatform;
 
     /// <summary>Extra credits (director, composer…) for tiles.</summary>
-    public IReadOnlyList<Credit> Credits => Model.Credits ?? [];
+    public IReadOnlyList<Credit> Credits =>
+        (Model.Credits ?? [])
+            // The creator (director, developer…) is already shown on its own.
+            .Where(c => !string.Equals(c.Name, Model.Creator, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     public bool HasCredits => Credits.Count > 0;
 
@@ -80,7 +84,6 @@ public partial class EntryViewModel : ViewModelBase
             Add("Length", Model.Length);
             Add("Console", Platform?.Name);
             rows.AddRange(Credits);
-            Add("Completed", DateText);
             Add("List", List.Name);
             return rows;
         }
