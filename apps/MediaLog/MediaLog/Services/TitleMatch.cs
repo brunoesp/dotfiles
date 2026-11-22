@@ -39,7 +39,12 @@ public static class TitleMatch
     /// How well <paramref name="title"/> matches what was typed, from 0 (no shared words)
     /// to 1 (every typed word found); small bonuses for exact titles and titles starting the same.
     /// </summary>
-    public static double Score(string title, string query)
+    /// <param name="typing">
+    /// The query is still being typed, so its last word may be unfinished and matches as a prefix
+    /// ("a link to the pa"). For names of existing entries pass <c>false</c>: whole words only,
+    /// so "Desperados I" doesn't match "Desperados III".
+    /// </param>
+    public static double Score(string title, string query, bool typing = true)
     {
         var q = Words(query);
         if (q.Length == 0)
@@ -58,7 +63,7 @@ public static class TitleMatch
             // The word being typed matches as a prefix; other words also allow small typos in the
             // ending ("hedgehogs" ~ "hedgehog") by prefix matching when long enough.
             if (t.Contains(word)
-                || (last && t.Any(w => w.StartsWith(word, StringComparison.Ordinal)))
+                || (typing && last && t.Any(w => w.StartsWith(word, StringComparison.Ordinal)))
                 || (word.Length >= 5 && t.Any(w => w.Length >= 5 && (w.StartsWith(word[..^1]) || word.StartsWith(w[..^1])))))
                 found += weight;
         }
@@ -72,6 +77,23 @@ public static class TitleMatch
         // Prefer titles without many extra words.
         score -= Math.Max(0, t.Length - q.Length) * 0.005;
         return score;
+    }
+
+    /// <summary>
+    /// The part of an entry's name worth searching for: season / part labels and remarks are left
+    /// out ("The Big Bang Theory S04" → "The Big Bang Theory", "Alex Kidd 2 (Hack)" → "Alex Kidd 2",
+    /// "Dark Souls 3 + DLCs" → "Dark Souls 3"). Used for bulk lookups of existing entries.
+    /// </summary>
+    public static string SearchTitle(string name)
+    {
+        var s = System.Text.RegularExpressions.Regex.Replace(name, @"\s*[\(\[][^\)\]]*[\)\]]", "");
+        s = System.Text.RegularExpressions.Regex.Replace(s,
+            @"\s*(?:-\s*)?\b(?:S\d{1,2}(?:E\d{1,3})?|Season\s+\d+|Temporada\s+\d+|Part\s+\d+)\b.*$", "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"\s*\+\s*(?:DLCs?|OVA|OVAs|Expansions?)\b.*$", "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        s = s.Trim(' ', '-', ':', '+');
+        return s.Length >= 2 ? s : name;
     }
 
     /// <summary>

@@ -606,7 +606,7 @@ public partial class MainViewModel : ViewModelBase
     private System.Threading.CancellationTokenSource? _refreshCts;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RefreshAllInfoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshAllInfoCommand), nameof(FindMissingCoversCommand))]
     public partial bool IsRefreshing { get; set; }
 
     /// <summary>Progress / result text; <c>null</c> hides the status bar.</summary>
@@ -617,6 +617,95 @@ public partial class MainViewModel : ViewModelBase
     public partial double RefreshProgress { get; set; }
 
     private bool CanRefreshAll() => !IsRefreshing;
+
+    /// <summary>
+    /// Only covers: for every entry without one, runs the cover image search (by title, type and
+    /// console) and takes the best-matching image that actually downloads. Nothing else changes.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRefreshAll))]
+    private async System.Threading.Tasks.Task FindMissingCovers()
+    {
+        var cts = _refreshCts = new System.Threading.CancellationTokenSource();
+        var entries = AllEntries().Select(x => x.Entry).Where(e => string.IsNullOrEmpty(e.ImageUrl)).ToList();
+        if (entries.Count == 0)
+        {
+            ShowStatus("Every entry already has a cover.");
+            return;
+        }
+        IsRefreshing = true;
+        RefreshProgress = 0;
+        Services.Wikimedia.Patient = true;
+        int found = 0, done = 0;
+        var lastRedraw = System.Diagnostics.Stopwatch.StartNew();
+        using var slots = new System.Threading.SemaphoreSlim(6);
+        try
+        {
+            var tasks = entries.Select(async entry =>
+            {
+                await slots.WaitAsync(cts.Token);
+                try
+                {
+                    if (await FindCoverAsync(entry, cts.Token) is { } url)
+                    {
+                        entry.ImageUrl = url;
+                        found++;
+                        if (lastRedraw.Elapsed > TimeSpan.FromSeconds(2))
+                        {
+                            Persist();
+                            Refresh();
+                            lastRedraw.Restart();
+                        }
+                    }
+                    done++;
+                    RefreshProgress = (double)done / entries.Count;
+                    RefreshStatus = $"Finding covers {done} of {entries.Count}: {entry.Name}";
+                }
+                finally
+                {
+                    slots.Release();
+                }
+            }).ToList();
+            await System.Threading.Tasks.Task.WhenAll(tasks);
+            RefreshStatus = $"Done: found covers for {found} of {entries.Count} entries.";
+        }
+        catch (OperationCanceledException)
+        {
+            RefreshStatus = $"Stopped: found {found} covers ({done} of {entries.Count} checked).";
+        }
+        finally
+        {
+            IsRefreshing = false;
+            Services.Wikimedia.Patient = false;
+            Persist();
+            Refresh();
+        }
+    }
+
+    /// <summary>The best image search result for an entry that downloads fine, or <c>null</c>.</summary>
+    private async System.Threading.Tasks.Task<string?> FindCoverAsync(MediaEntry entry, System.Threading.CancellationToken ct)
+    {
+        var results = new List<ImageResult>();
+        var title = Services.TitleMatch.SearchTitle(entry.Name);
+        await foreach (var batch in ImageSearchService.SearchAsync(title, TypeFor(entry.Kind), entry.Platform, ct))
+            results.AddRange(batch);
+        // Closest title first (stable: keeps the sources' own order on ties).
+        var ranked = results
+            .Select((r, i) => (Result: r, Score: Services.TitleMatch.Score(r.Title, title, typing: false), Index: i))
+            // Only images of clearly the same title: no cover is better than a wrong one
+            // ("Desperados I" mustn't get the cover of "Desperados III").
+            .Where(x => x.Score >= 0.9)
+            .OrderByDescending(x => Math.Round(x.Score, 1))
+            .ThenBy(x => x.Index)
+            .Select(x => x.Result)
+            .Take(4);
+        foreach (var candidate in ranked)
+        {
+            // Make sure it really is an image (and keep it for offline use).
+            if (await ImageCache.GetAsync(candidate.Url) is not null)
+                return candidate.Url;
+        }
+        return null;
+    }
 
     /// <summary>
     /// Looks every entry up online again and fills in what's missing (year, creator, length,
@@ -702,9 +791,10 @@ public partial class MainViewModel : ViewModelBase
                 && (!wantsCredits || entry.Credits is { Count: > 0 }) && (!wantsPlatform || entry.Platform is not null)))
             return false;
 
+        var searchTitle = Services.TitleMatch.SearchTitle(entry.Name); // "Show S04" → "Show"
         // Retro games: the console's box art is looked up at the same time as the title.
         var boxArtTask = entry.ImageUrl is null && wantsPlatform && Services.Platforms.BoxArtRepo(entry.Platform) is { } knownRepo
-            ? Services.RetroBoxArt.SearchAsync(entry.Name, knownRepo, ct)
+            ? Services.RetroBoxArt.SearchAsync(searchTitle, knownRepo, ct)
             : null;
 
         // All sources are asked at once; stop waiting for the slower ones as soon as one gives a
@@ -714,12 +804,12 @@ public partial class MainViewModel : ViewModelBase
         {
             try
             {
-                await foreach (var batch in MetadataService.SuggestAsync(entry.Name, type, entry.Platform, lookup.Token))
+                await foreach (var batch in MetadataService.SuggestAsync(searchTitle, type, entry.Platform, lookup.Token))
                 {
                     candidates.AddRange(batch);
                     if (batch.Any(c => c.Year is not null && c.Creator is not null
-                                       && Services.TitleMatch.Score(c.Title, entry.Name) >= 0.99
-                                       && Services.TitleMatch.Score(entry.Name, c.Title) >= 0.99))
+                                       && Services.TitleMatch.Score(c.Title, searchTitle, typing: false) >= 0.99
+                                       && Services.TitleMatch.Score(searchTitle, c.Title, typing: false) >= 0.99))
                     {
                         lookup.Cancel();
                         break;
@@ -735,8 +825,8 @@ public partial class MainViewModel : ViewModelBase
         // among those, prefer the closest title, the same year and richer details.
         var best = candidates
             .Select(c => (Suggestion: c,
-                Forward: Services.TitleMatch.Score(c.Title, entry.Name),
-                Score: Services.TitleMatch.Score(c.Title, entry.Name) + Services.TitleMatch.Score(entry.Name, c.Title)
+                Forward: Services.TitleMatch.Score(c.Title, searchTitle, typing: false),
+                Score: Services.TitleMatch.Score(c.Title, searchTitle, typing: false) + Services.TitleMatch.Score(searchTitle, c.Title, typing: false)
                        + (entry.Year is { } y && c.Year == y ? 0.3 : 0)
                        + (c.Year is not null || c.Creator is not null ? 0.05 : 0)))
             .Where(x => x.Forward >= 0.95 && x.Score >= 1.25)

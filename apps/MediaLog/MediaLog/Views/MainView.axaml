@@ -264,6 +264,13 @@
                                 <TextBlock Text="Import…" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Classes="navAction" Command="{Binding FindMissingCoversCommand}" HorizontalAlignment="Stretch"
+                                ToolTip.Tip="Search a cover image for every entry that has none (nothing else changes)">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <c:StrokeIcon Data="{x:Static c:Icons.Image}" Width="18" Height="18" Foreground="{DynamicResource SubtleText}" />
+                                <TextBlock Text="Find missing covers" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="navAction" Command="{Binding RefreshAllInfoCommand}" HorizontalAlignment="Stretch"
                                 ToolTip.Tip="Look up every entry online and fill in missing year, credits, covers…">
                             <StackPanel Orientation="Horizontal" Spacing="10">
