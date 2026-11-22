@@ -10,7 +10,11 @@ public sealed class MediaEntry
     public string Name { get; set; } = "";
     /// <summary>Id of the entry's <see cref="MediaTypeDef"/>.</summary>
     public string Kind { get; set; } = "Other";
+    /// <summary>Completion date; for a to-do entry, the date it was added.</summary>
     public DateOnly CompletedOn { get; set; }
+
+    /// <summary>Not consumed yet: something to watch / play / read later.</summary>
+    public bool ToDo { get; set; }
 
     /// <summary>Release / publication year.</summary>
     public int? Year { get; set; }

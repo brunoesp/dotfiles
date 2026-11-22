@@ -14,12 +14,12 @@ namespace MediaLog.Services;
 /// </summary>
 public static class Wikimedia
 {
-    private static readonly SemaphoreSlim Gate = new(2, 2);
+    private static readonly SemaphoreSlim Gate = new(3, 3);
     private static readonly object Lock = new();
     private static readonly Dictionary<string, (DateTime Expires, string Body)> Cache = new();
     private static DateTime _next = DateTime.MinValue;
 
-    private static readonly TimeSpan Spacing = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan Spacing = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(30);
 
     private static readonly AsyncLocal<bool> PatientFlag = new();

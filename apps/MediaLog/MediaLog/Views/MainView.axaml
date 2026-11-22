@@ -14,6 +14,208 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
+    <UserControl.Resources>
+        <!-- Entry templates, shared by the "Completed" and "To do" sections -->
+        <DataTemplate x:Key="CardTemplate" DataType="vm:EntryViewModel">
+            <Border Classes="card entry" Margin="0,0,0,6" ClipToBounds="True">
+                <Grid ColumnDefinitions="4,Auto,Auto,*,Auto">
+                    <!-- color stripe -->
+                    <Border Background="{Binding Type.Brush}" />
+                    <!-- thumbnail: shaped like the cover (uncropped), like tiles; placeholder only without one -->
+                    <!-- fixed-width slot so titles line up whatever the cover's shape -->
+                    <Panel Grid.Column="1" Width="72" Margin="6,8" VerticalAlignment="Center">
+                    <Border Width="{Binding ThumbWidth}" Height="46" CornerRadius="5"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="{Binding CoverBackground}" ClipToBounds="True">
+                        <Panel>
+                            <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18"
+                                          StrokeThickness="2.2" IsVisible="{Binding !HasImage}" />
+                            <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
+                        </Panel>
+                    </Border>
+                    </Panel>
+                    <!-- type-colored divider between thumbnail and title -->
+                    <Border Grid.Column="2" Width="2" Margin="0,0,12,0" Background="{Binding Type.Brush}" />
+                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="1" Margin="0,6">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
+                        <WrapPanel ItemSpacing="6" IsVisible="{Binding HasDetailsOrPlatform}">
+                            <TextBlock Text="{Binding Details}" FontSize="12" IsVisible="{Binding HasDetails}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                            <Border Classes="platformBadge" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}">
+                                <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                            </Border>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding CreditsLine}" Classes="subtle" FontSize="12" IsVisible="{Binding HasCredits}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <WrapPanel ItemSpacing="6">
+                            <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
+                            <TextBlock Classes="subtle" Text="·" FontSize="12" />
+                            <TextBlock Classes="subtle" Text="{Binding DateText}" FontSize="12" />
+                            <TextBlock Classes="subtle" Text="·" FontSize="12" IsVisible="{Binding ShowList}" />
+                            <TextBlock Classes="subtle" Text="{Binding List.Name}" FontSize="12" IsVisible="{Binding ShowList}" />
+                        </WrapPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,8,0">
+                    <Button Classes="done" Command="{Binding MarkDoneCommand}" IsVisible="{Binding IsToDo}" ToolTip.Tip="Mark as done (completed today)">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Check}" Width="15" Height="15" StrokeThickness="2.6" />
+                            <TextBlock Text="Done" VerticalAlignment="Center" FontSize="13" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel Orientation="Horizontal" IsVisible="{Binding ShowActions}">
+                        <Button Classes="icon" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" />
+                        </Button>
+                        <Button Classes="icon danger" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                            <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
+                        </Button>
+                    </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TileTemplate" DataType="vm:EntryViewModel">
+            <Border Classes="card entry" Margin="4" ClipToBounds="True">
+                <Grid RowDefinitions="Auto,Auto,*">
+                    <!-- cover: shaped like the image (uncropped) -->
+                    <c:AspectBox Ratio="{Binding TileCoverRatio}">
+                    <Border Background="{Binding CoverBackground}" ClipToBounds="True">
+                        <Panel>
+                            <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
+                                          Width="44" Height="44" StrokeThickness="1.8" IsVisible="{Binding !HasImage}" />
+                            <!-- the cover box has the image's own shape; Uniform never crops -->
+                            <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
+                            <!-- console badge -->
+                            <Border Classes="platformBadge large" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
+                                <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                            </Border>
+                            <!-- type badge over the cover image -->
+                            <Border Width="26" Height="26" CornerRadius="13" Margin="8" Background="{Binding Type.Brush}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasImage}"
+                                    BorderBrush="#CCFFFFFF" BorderThickness="1.5">
+                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="14" Height="14" StrokeThickness="2.4" />
+                            </Border>
+                        </Panel>
+                    </Border>
+                    </c:AspectBox>
+                    <!-- type-colored line between cover and info -->
+                    <Border Grid.Row="1" Height="3" Background="{Binding Type.Brush}" />
+                    <Button Classes="done tileDone" Command="{Binding MarkDoneCommand}" IsVisible="{Binding IsToDo}"
+                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6" ToolTip.Tip="Mark as done (completed today)">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <c:StrokeIcon Data="{x:Static c:Icons.Check}" Width="14" Height="14" StrokeThickness="2.6" />
+                        <TextBlock Text="Done" VerticalAlignment="Center" FontSize="12" />
+                    </StackPanel>
+                </Button>
+                <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                            IsVisible="{Binding ShowActions}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Classes="icon tileButton" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry / choose image">
+                                <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Foreground="White" Width="15" Height="15" />
+                            </Button>
+                            <Button Classes="icon tileButton" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                                <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Foreground="White" Width="15" Height="15" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <!-- square covers leave more room: roomier, line-per-detail layout -->
+                    <DockPanel Grid.Row="2" Margin="12,10,12,12" IsVisible="{Binding IsSquareCover}">
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
+                                <TextBlock Classes="subtle" FontSize="12" Text="·" />
+                                <TextBlock Classes="subtle" FontSize="12" Text="{Binding DateText}" />
+                            </StackPanel>
+                            <TextBlock Classes="subtle" FontSize="12" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"
+                                       TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Creator}" FontSize="14" IsVisible="{Binding HasCreator}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding YearAndLength}" Classes="subtle" FontSize="12" IsVisible="{Binding HasYearAndLength}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <ItemsControl ItemsSource="{Binding TileCredits}" IsVisible="{Binding HasCredits}" Margin="0,4,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="m:Credit">
+                                        <TextBlock FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,1">
+                                            <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
+                                            <Run Text="{Binding Name}" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding MoreCreditsText}" Classes="subtle" FontSize="11" IsVisible="{Binding HasMoreCredits}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Grid.Row="2" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="1" Margin="0,6,0,0">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
+                                <TextBlock Classes="subtle" FontSize="11" Text="·" />
+                                <TextBlock Classes="subtle" FontSize="11" Text="{Binding DateText}" />
+                            </StackPanel>
+                            <TextBlock Classes="subtle" FontSize="11" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                       TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
+                                       TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                            <ItemsControl ItemsSource="{Binding TileCredits}" IsVisible="{Binding HasCredits}" Margin="0,3,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="m:Credit">
+                                        <TextBlock FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,1">
+                                            <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
+                                            <Run Text="{Binding Name}" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding MoreCreditsText}" Classes="subtle" FontSize="11" IsVisible="{Binding HasMoreCredits}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="CompactTemplate" DataType="vm:EntryViewModel">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Classes="compactRow entry" Height="34">
+                <Border Width="20" Height="20" CornerRadius="10" Margin="12,0,10,0" Background="{Binding Type.Brush}">
+                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="12" Height="12" StrokeThickness="2.4" />
+                </Border>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True">
+                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontSize="13" />
+                    <TextBlock Text="{Binding Details}" Classes="subtle compactType" FontSize="12" TextTrimming="CharacterEllipsis" />
+                    <Border Classes="platformBadge" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}">
+                        <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold"
+                           FontSize="11" VerticalAlignment="Center" Margin="8,0" Classes="compactType" />
+                <TextBlock Grid.Column="3" Classes="subtle" Text="{Binding DateText}" FontSize="12" VerticalAlignment="Center"
+                           MinWidth="78" TextAlignment="Right" Margin="0,0,14,0" />
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,6,0">
+                <Button Classes="icon done" Padding="6" Command="{Binding MarkDoneCommand}" IsVisible="{Binding IsToDo}" ToolTip.Tip="Mark as done (completed today)">
+                    <c:StrokeIcon Data="{x:Static c:Icons.Check}" Width="15" Height="15" StrokeThickness="2.6" />
+                </Button>
+                <StackPanel Orientation="Horizontal" IsVisible="{Binding ShowActions}">
+                    <Button Classes="icon" Padding="6" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
+                        <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Width="15" Height="15" />
+                    </Button>
+                    <Button Classes="icon danger" Padding="6" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
+                        <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Width="15" Height="15" />
+                    </Button>
+                </StackPanel>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <UserControl.DataTemplates>
         <!-- Media type: colored icon + label (used by the type picker) -->
         <DataTemplate DataType="m:MediaTypeInfo">
@@ -226,7 +428,7 @@
                                     </ComboBox>
 
                                     <TextBox Grid.Column="1" Classes="bare" Text="{Binding NewName}"
-                                             PlaceholderText="What did you finish?" VerticalAlignment="Center">
+                                             PlaceholderText="{Binding NewTitlePlaceholder}" VerticalAlignment="Center">
                                         <TextBox.KeyBindings>
                                             <KeyBinding Gesture="Enter" Command="{Binding AddEntryCommand}" />
                                             <KeyBinding Gesture="Escape" Command="{Binding NewSuggestions.DismissCommand}" />
@@ -242,6 +444,7 @@
                                                              ToolTip.Tip="Console. Type a new one to add it" />
                                             <Border Classes="sep" />
                                             <CalendarDatePicker Classes="bare" SelectedDate="{Binding NewDate}" Width="132"
+                                                                IsVisible="{Binding !NewIsToDo}"
                                                                 SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy"
                                                                 ToolTip.Tip="Date completed" />
                                             <Border Classes="sep" IsVisible="{Binding NeedsTargetList}" />
@@ -251,7 +454,15 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <Button Grid.Column="3" Classes="cover" Command="{Binding OpenNewCoverCommand}"
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                    <ToggleButton Classes="todoToggle" IsChecked="{Binding NewIsToDo}"
+                                                  ToolTip.Tip="Add as to do: something to watch / play / read later (no completion date)">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <c:StrokeIcon Data="{x:Static c:Icons.List}" Width="15" Height="15" />
+                                            <TextBlock Text="To do" VerticalAlignment="Center" FontSize="13" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <Button Classes="cover" Command="{Binding OpenNewCoverCommand}"
                                             ToolTip.Tip="Choose a cover image">
                                         <Panel>
                                             <c:StrokeIcon Data="{x:Static c:Icons.Image}" Width="20" Height="20"
@@ -262,6 +473,7 @@
                                             </Border>
                                         </Panel>
                                     </Button>
+                                    </StackPanel>
                                     <Button Grid.Column="4" Classes="add" Command="{Binding AddEntryCommand}" ToolTip.Tip="Add (Enter)">
                                         <c:StrokeIcon Data="{x:Static c:Icons.Plus}" Foreground="White" Width="26" Height="26" StrokeThickness="2.6" />
                                     </Button>
@@ -296,210 +508,55 @@
                                     IsVisible="{Binding IsFiltered}" />
                         </Grid>
 
-                        <!-- Entries: cards view -->
-                        <ItemsControl ItemsSource="{Binding Entries}" Margin="16,0,16,16" IsVisible="{Binding IsCardsMode}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:EntryViewModel">
-                                    <Border Classes="card entry" Margin="0,0,0,6" ClipToBounds="True">
-                                        <Grid ColumnDefinitions="4,Auto,Auto,*,Auto">
-                                            <!-- color stripe -->
-                                            <Border Background="{Binding Type.Brush}" />
-                                            <!-- thumbnail: shaped like the cover (uncropped), like tiles; placeholder only without one -->
-                                            <!-- fixed-width slot so titles line up whatever the cover's shape -->
-                                            <Panel Grid.Column="1" Width="72" Margin="6,8" VerticalAlignment="Center">
-                                            <Border Width="{Binding ThumbWidth}" Height="46" CornerRadius="5"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                    Background="{Binding CoverBackground}" ClipToBounds="True">
-                                                <Panel>
-                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18"
-                                                                  StrokeThickness="2.2" IsVisible="{Binding !HasImage}" />
-                                                    <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
-                                                </Panel>
-                                            </Border>
-                                            </Panel>
-                                            <!-- type-colored divider between thumbnail and title -->
-                                            <Border Grid.Column="2" Width="2" Margin="0,0,12,0" Background="{Binding Type.Brush}" />
-                                            <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="1" Margin="0,6">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
-                                                <WrapPanel ItemSpacing="6" IsVisible="{Binding HasDetailsOrPlatform}">
-                                                    <TextBlock Text="{Binding Details}" FontSize="12" IsVisible="{Binding HasDetails}" TextWrapping="Wrap"
-                                                               VerticalAlignment="Center" />
-                                                    <Border Classes="platformBadge" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}">
-                                                        <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
-                                                    </Border>
-                                                </WrapPanel>
-                                                <TextBlock Text="{Binding CreditsLine}" Classes="subtle" FontSize="12" IsVisible="{Binding HasCredits}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <WrapPanel ItemSpacing="6">
-                                                    <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
-                                                    <TextBlock Classes="subtle" Text="·" FontSize="12" />
-                                                    <TextBlock Classes="subtle" Text="{Binding DateText}" FontSize="12" />
-                                                    <TextBlock Classes="subtle" Text="·" FontSize="12" IsVisible="{Binding ShowList}" />
-                                                    <TextBlock Classes="subtle" Text="{Binding List.Name}" FontSize="12" IsVisible="{Binding ShowList}" />
-                                                </WrapPanel>
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,8,0" IsVisible="{Binding ShowActions}">
-                                                <Button Classes="icon" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
-                                                    <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" />
-                                                </Button>
-                                                <Button Classes="icon danger" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
-                                                    <c:StrokeIcon Data="{x:Static c:Icons.Trash}" />
-                                                </Button>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <!-- Entries: tiles view -->
-                        <ItemsControl x:Name="TilesView" ItemsSource="{Binding Entries}" Margin="12,0,12,16" IsVisible="{Binding IsTilesMode}">
+                        <!-- ===== Completed ===== -->
+                        <TextBlock Classes="sectionHeader" Text="{Binding CompletedHeader}" IsVisible="{Binding ShowCompletedHeader}" />
+                        <ItemsControl ItemsSource="{Binding Entries}" ItemTemplate="{StaticResource CardTemplate}"
+                                      Margin="16,0,16,16" IsVisible="{Binding IsCardsMode}" />
+                        <ItemsControl ItemsSource="{Binding Entries}" ItemTemplate="{StaticResource TileTemplate}"
+                                      Margin="12,0,12,16" IsVisible="{Binding IsTilesMode}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <c:TileGrid Columns="{Binding TileColumns}" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:EntryViewModel">
-                                    <Border Classes="card entry" Margin="4" ClipToBounds="True">
-                                        <Grid RowDefinitions="Auto,Auto,*">
-                                            <!-- cover: shaped like the image (uncropped) -->
-                                            <c:AspectBox Ratio="{Binding TileCoverRatio}">
-                                            <Border Background="{Binding CoverBackground}" ClipToBounds="True">
-                                                <Panel>
-                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
-                                                                  Width="44" Height="44" StrokeThickness="1.8" IsVisible="{Binding !HasImage}" />
-                                                    <!-- the cover box has the image's own shape; Uniform never crops -->
-                                                    <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
-                                                    <!-- console badge -->
-                                                    <Border Classes="platformBadge large" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}"
-                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
-                                                        <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
-                                                    </Border>
-                                                    <!-- type badge over the cover image -->
-                                                    <Border Width="26" Height="26" CornerRadius="13" Margin="8" Background="{Binding Type.Brush}"
-                                                            HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasImage}"
-                                                            BorderBrush="#CCFFFFFF" BorderThickness="1.5">
-                                                        <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="14" Height="14" StrokeThickness="2.4" />
-                                                    </Border>
-                                                </Panel>
-                                            </Border>
-                                            </c:AspectBox>
-                                            <!-- type-colored line between cover and info -->
-                                            <Border Grid.Row="1" Height="3" Background="{Binding Type.Brush}" />
-                                            <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
-                                                    IsVisible="{Binding ShowActions}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Button Classes="icon tileButton" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry / choose image">
-                                                        <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Foreground="White" Width="15" Height="15" />
-                                                    </Button>
-                                                    <Button Classes="icon tileButton" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
-                                                        <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Foreground="White" Width="15" Height="15" />
-                                                    </Button>
-                                                </StackPanel>
-                                            </Border>
-                                            <!-- square covers leave more room: roomier, line-per-detail layout -->
-                                            <DockPanel Grid.Row="2" Margin="12,10,12,12" IsVisible="{Binding IsSquareCover}">
-                                                <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,8,0,0">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
-                                                        <TextBlock Classes="subtle" FontSize="12" Text="·" />
-                                                        <TextBlock Classes="subtle" FontSize="12" Text="{Binding DateText}" />
-                                                    </StackPanel>
-                                                    <TextBlock Classes="subtle" FontSize="12" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                                <StackPanel Spacing="3">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"
-                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Creator}" FontSize="14" IsVisible="{Binding HasCreator}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding YearAndLength}" Classes="subtle" FontSize="12" IsVisible="{Binding HasYearAndLength}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <ItemsControl ItemsSource="{Binding TileCredits}" IsVisible="{Binding HasCredits}" Margin="0,4,0,0">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate DataType="m:Credit">
-                                                                <TextBlock FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,1">
-                                                                    <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
-                                                                    <Run Text="{Binding Name}" />
-                                                                </TextBlock>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                    <TextBlock Text="{Binding MoreCreditsText}" Classes="subtle" FontSize="11" IsVisible="{Binding HasMoreCredits}" />
-                                                </StackPanel>
-                                            </DockPanel>
-                                            <DockPanel Grid.Row="2" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
-                                                <StackPanel DockPanel.Dock="Bottom" Spacing="1" Margin="0,6,0,0">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
-                                                        <TextBlock Classes="subtle" FontSize="11" Text="·" />
-                                                        <TextBlock Classes="subtle" FontSize="11" Text="{Binding DateText}" />
-                                                    </StackPanel>
-                                                    <TextBlock Classes="subtle" FontSize="11" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
-                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
-                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <ItemsControl ItemsSource="{Binding TileCredits}" IsVisible="{Binding HasCredits}" Margin="0,3,0,0">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate DataType="m:Credit">
-                                                                <TextBlock FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,1">
-                                                                    <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
-                                                                    <Run Text="{Binding Name}" />
-                                                                </TextBlock>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                    <TextBlock Text="{Binding MoreCreditsText}" Classes="subtle" FontSize="11" IsVisible="{Binding HasMoreCredits}" />
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <!-- Entries: compact view -->
                         <Border Classes="card" Margin="16,0,16,16" Padding="0,4">
                             <Border.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="IsCompactMode" />
-                                    <Binding Path="!IsEmpty" />
+                                    <Binding Path="HasCompleted" />
                                 </MultiBinding>
                             </Border.IsVisible>
-                            <ItemsControl ItemsSource="{Binding Entries}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:EntryViewModel">
-                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Classes="compactRow entry" Height="34">
-                                            <Border Width="20" Height="20" CornerRadius="10" Margin="12,0,10,0" Background="{Binding Type.Brush}">
-                                                <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="12" Height="12" StrokeThickness="2.4" />
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True">
-                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontSize="13" />
-                                                <TextBlock Text="{Binding Details}" Classes="subtle compactType" FontSize="12" TextTrimming="CharacterEllipsis" />
-                                                <Border Classes="platformBadge" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}">
-                                                    <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="2" Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold"
-                                                       FontSize="11" VerticalAlignment="Center" Margin="8,0" Classes="compactType" />
-                                            <TextBlock Grid.Column="3" Classes="subtle" Text="{Binding DateText}" FontSize="12" VerticalAlignment="Center"
-                                                       MinWidth="78" TextAlignment="Right" Margin="0,0,14,0" />
-                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,6,0" IsVisible="{Binding ShowActions}">
-                                                <Button Classes="icon" Padding="6" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
-                                                    <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Width="15" Height="15" />
-                                                </Button>
-                                                <Button Classes="icon danger" Padding="6" Command="{Binding DeleteCommand}" ToolTip.Tip="Remove entry">
-                                                    <c:StrokeIcon Data="{x:Static c:Icons.Trash}" Width="15" Height="15" />
-                                                </Button>
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding Entries}" ItemTemplate="{StaticResource CompactTemplate}" />
+                        </Border>
+
+                        <!-- ===== To do (not consumed yet) ===== -->
+                        <Grid ColumnDefinitions="*,Auto,*" Margin="20,6,20,10" IsVisible="{Binding HasToDo}">
+                            <Border Height="1" Background="{DynamicResource CardBorder}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" Margin="12,0">
+                                <c:StrokeIcon Data="{x:Static c:Icons.List}" Width="16" Height="16" Foreground="{DynamicResource SubtleText}" />
+                                <TextBlock Text="{Binding ToDoHeader}" FontWeight="SemiBold" Classes="subtle" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <Border Grid.Column="2" Height="1" Background="{DynamicResource CardBorder}" VerticalAlignment="Center" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding ToDoEntries}" ItemTemplate="{StaticResource CardTemplate}"
+                                      Margin="16,0,16,16" IsVisible="{Binding IsCardsMode}" />
+                        <ItemsControl ItemsSource="{Binding ToDoEntries}" ItemTemplate="{StaticResource TileTemplate}"
+                                      Margin="12,0,12,16" IsVisible="{Binding IsTilesMode}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <c:TileGrid Columns="{Binding TileColumns}" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Border Classes="card" Margin="16,0,16,16" Padding="0,4">
+                            <Border.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsCompactMode" />
+                                    <Binding Path="HasToDo" />
+                                </MultiBinding>
+                            </Border.IsVisible>
+                            <ItemsControl ItemsSource="{Binding ToDoEntries}" ItemTemplate="{StaticResource CompactTemplate}" />
                         </Border>
                         <TextBlock Classes="subtle" Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}"
                                    HorizontalAlignment="Center" Margin="24,16" TextWrapping="Wrap" TextAlignment="Center" />
@@ -568,7 +625,7 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
                                         <TextBlock Text="{Binding DateText}" FontSize="20" FontWeight="SemiBold"
                                                    Foreground="{Binding Type.Brush}" HorizontalAlignment="Right" />
-                                        <TextBlock Text="completed" Classes="subtle" FontSize="11" HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding DateCaption}" Classes="subtle" FontSize="11" HorizontalAlignment="Right" />
                                     </StackPanel>
                                 </Grid>
                                 <WrapPanel ItemSpacing="8" LineSpacing="6">
@@ -668,7 +725,9 @@
                                     <views:TitleSuggestionsView DataContext="{Binding Suggestions}" />
                                     <WrapPanel ItemSpacing="8" LineSpacing="8">
                                         <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding Type}" MinWidth="170" ToolTip.Tip="Type" />
-                                        <CalendarDatePicker SelectedDate="{Binding Date}" Width="150"
+                                        <CheckBox Content="To do" IsChecked="{Binding IsToDo}"
+                                                  ToolTip.Tip="Not consumed yet (no completion date)" />
+                                        <CalendarDatePicker SelectedDate="{Binding Date}" Width="150" IsEnabled="{Binding IsCompleted}"
                                                             SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy" ToolTip.Tip="Date completed" />
                                         <ComboBox ItemsSource="{Binding Lists}" SelectedItem="{Binding List}" MinWidth="130" ToolTip.Tip="List" />
                                         <AutoCompleteBox Text="{Binding PlatformText}" ItemsSource="{Binding PlatformNames}" FilterMode="Contains"

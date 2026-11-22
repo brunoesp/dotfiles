@@ -525,11 +525,13 @@ public partial class MainViewModel : ViewModelBase
         if (target?.Model is null || string.IsNullOrWhiteSpace(NewName))
             return;
 
-        var date = DateOnly.FromDateTime(NewDate ?? DateTime.Today);
+        var toDo = NewIsToDo;
+        var date = toDo ? DateOnly.FromDateTime(DateTime.Today) : DateOnly.FromDateTime(NewDate ?? DateTime.Today);
         var type = NewType ?? Types[0];
         // Year lists hold the entries of their year: route to the list matching the date.
+        // To-dos have no completion date: from a year list they go to the "To do" list.
         if (target.IsYearList)
-            target = EnsureYearList(date.Year);
+            target = toDo ? EnsureToDoList() : EnsureYearList(date.Year);
 
         var imageUrl = NewCover.ImageUrl;
         var details = NewDetails;
@@ -539,6 +541,7 @@ public partial class MainViewModel : ViewModelBase
             Year = details?.Year, Creator = details?.Creator, Length = details?.Length,
             Credits = details?.Credits is { Count: > 0 } credits ? credits.ToList() : null,
             Platform = IsNewGame ? EnsurePlatform(NewPlatform) : null,
+            ToDo = toDo,
         });
         if (imageUrl is not null)
             _ = ImageCache.SaveToDiskAsync(imageUrl);
@@ -629,21 +632,40 @@ public partial class MainViewModel : ViewModelBase
         Services.Wikimedia.Patient = true; // background work: wait out rate limits instead of giving up
         var updated = 0;
         var done = 0;
+        var lastRedraw = System.Diagnostics.Stopwatch.StartNew();
+        // Several entries at a time: fast sources (AniList, TVmaze, iTunes, box art) run alongside
+        // the throttled Wikidata / Wikipedia requests instead of waiting for them.
+        using var slots = new System.Threading.SemaphoreSlim(4);
         try
         {
-            foreach (var entry in entries)
+            var tasks = entries.Select(async entry =>
             {
-                cts.Token.ThrowIfCancellationRequested();
-                RefreshStatus = $"Refreshing info {done + 1} of {entries.Count}: {entry.Name}";
-                if (await RefreshEntryAsync(entry, cts.Token))
+                await slots.WaitAsync(cts.Token);
+                try
                 {
-                    updated++;
-                    Persist();
-                    Refresh();
+                    var changed = await RefreshEntryAsync(entry, cts.Token);
+                    // Continuations run on the UI thread: safe to update state here.
+                    done++;
+                    RefreshProgress = (double)done / entries.Count;
+                    RefreshStatus = $"Refreshing info {done} of {entries.Count}: {entry.Name}";
+                    if (changed)
+                    {
+                        updated++;
+                        // Saving and redrawing every entry is slow: do it every couple of seconds.
+                        if (lastRedraw.Elapsed > TimeSpan.FromSeconds(2))
+                        {
+                            Persist();
+                            Refresh();
+                            lastRedraw.Restart();
+                        }
+                    }
                 }
-                done++;
-                RefreshProgress = (double)done / entries.Count;
-            }
+                finally
+                {
+                    slots.Release();
+                }
+            }).ToList();
+            await System.Threading.Tasks.Task.WhenAll(tasks);
             RefreshStatus = $"Done: updated {updated} of {entries.Count} entries.";
         }
         catch (OperationCanceledException)
@@ -654,6 +676,8 @@ public partial class MainViewModel : ViewModelBase
         {
             IsRefreshing = false;
             Services.Wikimedia.Patient = false;
+            Persist();
+            Refresh();
         }
     }
 
@@ -670,10 +694,12 @@ public partial class MainViewModel : ViewModelBase
         var wantsCredits = category is Services.MediaCategory.Game or Services.MediaCategory.Film;
         var wantsPlatform = category == Services.MediaCategory.Game;
         const int currentInfoVersion = 2;
-        if (entry.Year is not null && entry.Creator is not null && entry.ImageUrl is not null
-            && (!wantsCredits || (entry.Credits is { Count: > 0 } && entry.InfoVersion >= currentInfoVersion))
-            && (!wantsPlatform || entry.Platform is not null))
-            return false; // nothing missing
+        // Already looked up with the current lookup (even if some details weren't found), or
+        // nothing missing: skip. This makes a second "Refresh all" fast.
+        if (entry.InfoVersion >= currentInfoVersion
+            || (entry.Year is not null && entry.Creator is not null && entry.ImageUrl is not null
+                && (!wantsCredits || entry.Credits is { Count: > 0 }) && (!wantsPlatform || entry.Platform is not null)))
+            return false;
 
         var candidates = new List<MediaSuggestion>();
         await foreach (var batch in MetadataService.SuggestAsync(entry.Name, type, entry.Platform, ct))
@@ -692,7 +718,16 @@ public partial class MainViewModel : ViewModelBase
             .Select(x => x.Suggestion)
             .FirstOrDefault();
         if (best is null)
+        {
+            // The sources answered but nothing matches: don't look this one up again every time.
+            // (No answers at all may be a network problem: try again next time.)
+            if (candidates.Count > 0)
+            {
+                entry.InfoVersion = currentInfoVersion;
+                return true;
+            }
             return false;
+        }
         best = await MetadataService.EnrichAsync(best, type, ct);
 
         var changed = false;
@@ -706,7 +741,7 @@ public partial class MainViewModel : ViewModelBase
             entry.Credits = mergedCredits!.ToList();
             changed = true;
         }
-        if (wantsCredits && entry.InfoVersion != currentInfoVersion)
+        if (entry.InfoVersion != currentInfoVersion)
         {
             entry.InfoVersion = currentInfoVersion;
             changed = true;
@@ -751,6 +786,55 @@ public partial class MainViewModel : ViewModelBase
     {
         foreach (var entry in Entries)
             entry.ShowActions = value;
+    }
+
+    // ==========================================================================
+    // To do
+    // ==========================================================================
+
+    /// <summary>Entries not consumed yet, shown in their own section below the finished ones.</summary>
+    public ObservableCollection<EntryViewModel> ToDoEntries { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCompletedHeader))]
+    public partial bool HasToDo { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCompletedHeader))]
+    public partial bool HasCompleted { get; set; }
+
+    /// <summary>The "Completed" heading only matters when there's a "To do" section too.</summary>
+    public bool ShowCompletedHeader => HasToDo && HasCompleted;
+
+    [ObservableProperty]
+    public partial string CompletedHeader { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string ToDoHeader { get; set; } = "";
+
+    /// <summary>Add bar: the next entry is a to-do (no completion date).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewTitlePlaceholder))]
+    public partial bool NewIsToDo { get; set; }
+
+    public string NewTitlePlaceholder => NewIsToDo ? "What's next to watch / play / read?" : "What did you finish?";
+
+    [RelayCommand]
+    private void ToggleNewToDo() => NewIsToDo = !NewIsToDo;
+
+    /// <summary>The custom list to-dos go to when added from a year list.</summary>
+    private ListViewModel EnsureToDoList() =>
+        UserLists.FirstOrDefault(l => !l.IsYearList && string.Equals(l.Model!.Name, "To do", StringComparison.OrdinalIgnoreCase))
+        ?? AddListViewModel(AddCustomList("To do"));
+
+    /// <summary>A to-do was consumed: it's completed today (and shows up in this year's list).</summary>
+    private void MarkDone(EntryViewModel entry)
+    {
+        entry.Model.ToDo = false;
+        entry.Model.CompletedOn = DateOnly.FromDateTime(DateTime.Today);
+        Persist();
+        Refresh();
+        ShowStatus($"Marked “{entry.Name}” as done.");
     }
 
     // ==========================================================================
@@ -864,6 +948,10 @@ public partial class MainViewModel : ViewModelBase
         var date = DateOnly.FromDateTime(editor.Date ?? entry.CompletedOn.ToDateTime(TimeOnly.MinValue));
         entry.Name = editor.Name.Trim();
         entry.Kind = editor.Type.Id;
+        var wasToDo = entry.ToDo;
+        entry.ToDo = editor.IsToDo;
+        if (entry.ToDo && !wasToDo)
+            date = DateOnly.FromDateTime(DateTime.Today); // a to-do's date is when it was added
         entry.CompletedOn = date;
         entry.ImageUrl = editor.Cover.ImageUrl;
         entry.Year = int.TryParse(editor.YearText?.Trim(), out var year) ? year : null;
@@ -878,7 +966,7 @@ public partial class MainViewModel : ViewModelBase
         var source = editor.Entry.List;
         var target = editor.List;
         if (target.IsYearList)
-            target = EnsureYearList(date.Year);
+            target = entry.ToDo ? EnsureToDoList() : EnsureYearList(date.Year);
         if (target != source && _library.Lists.Contains(source.Model!))
         {
             source.Model!.Entries.Remove(entry);
@@ -972,7 +1060,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void SyncYearLists()
     {
-        var years = AllEntries().Select(x => x.Entry.CompletedOn.Year).ToHashSet();
+        var years = AllEntries().Where(x => !x.Entry.ToDo).Select(x => x.Entry.CompletedOn.Year).ToHashSet();
         years.Add(DateTime.Today.Year);
 
         var changed = false;
@@ -1182,11 +1270,13 @@ public partial class MainViewModel : ViewModelBase
                 SelectedNav = CurrentYearList;
 
             var all = AllEntries().ToList();
-            var perYear = all.GroupBy(x => x.Entry.CompletedOn.Year).ToDictionary(g => g.Key, g => g.Count());
+            var completed = all.Where(x => !x.Entry.ToDo).ToList();
+            // Counts are of finished things; custom lists (e.g. "to watch with …") count everything in them.
+            var perYear = completed.GroupBy(x => x.Entry.CompletedOn.Year).ToDictionary(g => g.Key, g => g.Count());
             foreach (var list in UserLists)
                 list.Count = list.Model!.Year is { } y ? perYear.GetValueOrDefault(y) : list.Model.Entries.Count;
-            Master.Count = all.Count;
-            SyncTypeNav(all.GroupBy(x => x.Entry.Kind).ToDictionary(g => g.Key, g => g.Count()));
+            Master.Count = completed.Count;
+            SyncTypeNav(completed.GroupBy(x => x.Entry.Kind).ToDictionary(g => g.Key, g => g.Count()));
             if (SelectedNav is null || !NavItems.Contains(SelectedNav))
                 SelectedNav = CurrentYearList;
 
@@ -1196,10 +1286,11 @@ public partial class MainViewModel : ViewModelBase
                 null => [],
                 { IsMaster: true } => all,
                 { Type: { } type } => all.Where(x => x.Entry.Kind == type.Id).ToList(),
-                { Model.Year: { } year } => all.Where(x => x.Entry.CompletedOn.Year == year).ToList(),
+                { Model.Year: { } year } => completed.Where(x => x.Entry.CompletedOn.Year == year).ToList(),
                 var l => all.Where(x => x.List == l).ToList(),
             };
-            ScopeCount = scope.Count;
+            ScopeCount = scope.Count(x => !x.Entry.ToDo);
+            var scopeToDo = scope.Count(x => x.Entry.ToDo);
 
             Stats.Clear();
             foreach (var group in scope.GroupBy(x => x.Entry.Kind).OrderByDescending(g => g.Count()).ThenBy(g => TypeFor(g.Key).Label))
@@ -1213,14 +1304,25 @@ public partial class MainViewModel : ViewModelBase
                 .ThenBy(x => x.Entry.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
+            // Finished entries first, then a separate "To do" section.
             Entries.Clear();
+            ToDoEntries.Clear();
             foreach (var (entry, list) in visible)
-                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor,
-                    PlatformFor(entry.Platform))
-                    { ShowActions = IsEditMode });
+            {
+                var vm = new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor,
+                    PlatformFor(entry.Platform), MarkDone)
+                    { ShowActions = IsEditMode };
+                (entry.ToDo ? ToDoEntries : Entries).Add(vm);
+            }
+            HasCompleted = Entries.Count > 0;
+            HasToDo = ToDoEntries.Count > 0;
+            CompletedHeader = $"Completed · {Entries.Count}";
+            ToDoHeader = $"To do · {ToDoEntries.Count}";
 
             var noun = ScopeCount == 1 ? "item" : "items";
-            CountText = IsFiltered ? $"{visible.Count} of {ScopeCount} {noun}" : $"{ScopeCount} {noun}";
+            var visibleDone = Entries.Count;
+            CountText = (IsFiltered ? $"{visibleDone} of {ScopeCount} {noun}" : $"{ScopeCount} {noun}")
+                        + (scopeToDo > 0 ? $" · {scopeToDo} to do" : "");
             IsEmpty = visible.Count == 0;
             EmptyText = ScopeCount == 0
                 ? NeedsTargetList

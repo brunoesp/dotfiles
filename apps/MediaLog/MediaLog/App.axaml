@@ -243,6 +243,50 @@
             <Setter Property="BorderThickness" Value="0" />
         </Style>
 
+        <!-- Section headings and to-do controls -->
+        <Style Selector="TextBlock.sectionHeader">
+            <Setter Property="Margin" Value="20,2,16,8" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource SubtleText}" />
+        </Style>
+        <Style Selector="Button.done">
+            <Setter Property="Background" Value="#1A00C853" />
+            <Setter Property="Foreground" Value="#00A844" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.done c|StrokeIcon">
+            <Setter Property="Foreground" Value="#00A844" />
+        </Style>
+        <Style Selector="Button.done:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3300C853" />
+            <Setter Property="Foreground" Value="#008F3A" />
+        </Style>
+        <Style Selector="Button.tileDone">
+            <Setter Property="Background" Value="#E6FFFFFF" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style Selector="ToggleButton.todoToggle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ToggleButton.todoToggle c|StrokeIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SubtleText}" />
+        </Style>
+        <Style Selector="ToggleButton.todoToggle:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.todoToggle:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3D5AFE" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="ToggleButton.todoToggle:checked c|StrokeIcon">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
         <!-- Edit mode toggle -->
         <Style Selector="Button.editToggle">
             <Setter Property="Background" Value="{DynamicResource CardBackground}" />

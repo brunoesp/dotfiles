@@ -65,12 +65,20 @@ documentaries, audiobooks…
   Tap / click outside the card to close it.
 
   ![details](docs/details.png)
+- **To do** – switch on *To do* in the add bar to add something you still want to watch / play /
+  read (no completion date), e.g. movies to see with a friend in a list named after them. Lists show
+  the finished entries and a separate **To do** section; *Done* marks one as completed today (it then
+  also counts in that year). Year lists and counts only include finished entries; to-dos added from a
+  year list go to a "To do" list.
+
+  ![to do](docs/todo.png)
 - **Import…** (sidebar) – merges a MediaLog library file (.json): new types and consoles are added,
   entries go to their year (by date) or to the custom list of the same name, and entries already
   present are skipped, so importing twice is harmless.
 - **Refresh all info** (sidebar) – looks every entry up online again and fills in what's missing
   (year, creator, length, credits, console, cover) without changing anything already filled in;
-  shows progress and can be stopped. Wikimedia requests are throttled and cached, and a refresh
+  shows progress and can be stopped. Several entries are looked up at once, and entries already
+  looked up are skipped next time. Wikimedia requests are throttled and cached, and a refresh
   waits out rate limits instead of giving up.
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice
   is remembered per list.

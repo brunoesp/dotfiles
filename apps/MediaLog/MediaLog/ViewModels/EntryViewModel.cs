@@ -16,10 +16,19 @@ public partial class EntryViewModel : ViewModelBase
 {
     private readonly Action<EntryViewModel> _delete;
     private readonly Action<EntryViewModel> _edit;
+    private readonly Action<EntryViewModel>? _markDone;
+
+    /// <summary>Not consumed yet.</summary>
+    public bool IsToDo => Model.ToDo;
+
+    [RelayCommand]
+    private void MarkDone() => _markDone?.Invoke(this);
 
     public EntryViewModel(MediaEntry model, MediaTypeInfo type, ListViewModel list, bool showList,
-        Action<EntryViewModel> delete, Action<EntryViewModel> edit, PlatformInfo? platform = null)
+        Action<EntryViewModel> delete, Action<EntryViewModel> edit, PlatformInfo? platform = null,
+        Action<EntryViewModel>? markDone = null)
     {
+        _markDone = markDone;
         Platform = platform;
         Model = model;
         Type = type;
@@ -160,7 +169,12 @@ public partial class EntryViewModel : ViewModelBase
             ? Math.Clamp((double)size.Height / size.Width, 0.55, 1.8)
             : IsSquareCover ? 1.0 : 1.5;
 
-    public string DateText => Model.CompletedOn.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
+    public string DateText => Model.ToDo ? "To do" : CompletedText;
+
+    /// <summary>Under the big date in the details card.</summary>
+    public string DateCaption => Model.ToDo ? $"added {CompletedText}" : "completed";
+
+    private string CompletedText => Model.CompletedOn.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
 
     /// <summary>Edit / delete buttons are only shown in edit mode.</summary>
     [ObservableProperty]

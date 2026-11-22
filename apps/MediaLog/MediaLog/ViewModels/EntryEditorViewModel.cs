@@ -30,6 +30,7 @@ public partial class EntryEditorViewModel : ViewModelBase
         Type = entry.Type;
         Date = entry.Model.CompletedOn.ToDateTime(TimeOnly.MinValue);
         List = entry.List;
+        IsToDo = entry.Model.ToDo;
         YearText = entry.Model.Year?.ToString() ?? "";
         CreditsText = FormatCredits(entry.Model.Credits);
         Creator = entry.Model.Creator ?? "";
@@ -58,6 +59,20 @@ public partial class EntryEditorViewModel : ViewModelBase
     public bool IsGame => Services.MediaCategories.Of(Type) == Services.MediaCategory.Game;
 
     partial void OnTypeChanged(MediaTypeInfo value) => OnPropertyChanged(nameof(IsGame));
+
+    /// <summary>Not consumed yet (no completion date).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCompleted))]
+    public partial bool IsToDo { get; set; }
+
+    public bool IsCompleted => !IsToDo;
+
+    partial void OnIsToDoChanged(bool value)
+    {
+        // Unticking "To do" means it was just finished: default the completion date to today.
+        if (!value && Entry.Model.ToDo)
+            Date = DateTime.Today;
+    }
 
     [ObservableProperty]
     public partial string YearText { get; set; }
