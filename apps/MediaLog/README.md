@@ -60,6 +60,10 @@ documentaries, audiobooks…
   of the typed words they contain.
 
   ![games](docs/games.png)
+- **Details card** – press and hold any entry (touch, mouse or pen) to see everything fetched for it:
+  the whole cover, type and console, year, creator, length, all credits, list and completion date.
+
+  ![details](docs/details.png)
 - **Refresh all info** (sidebar) – looks every entry up online again and fills in what's missing
   (year, creator, length, credits, console, cover) without changing anything already filled in;
   shows progress and can be stopped. Wikimedia requests are throttled and cached, and a refresh

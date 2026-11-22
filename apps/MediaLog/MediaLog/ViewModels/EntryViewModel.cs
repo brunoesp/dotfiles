@@ -52,6 +52,40 @@ public partial class EntryViewModel : ViewModelBase
     /// <summary>"Director: Hiroshi Yamauchi · Composer: Koji Kondo" for cards.</summary>
     public string CreditsLine => string.Join("  ·  ", Credits.Select(c => $"{c.Role}: {c.Name}"));
 
+    /// <summary>Label for <see cref="Creator"/> depending on the media ("Director", "Author"…).</summary>
+    public string CreatorLabel => MediaCategories.Of(Type) switch
+    {
+        MediaCategory.Film => "Director",
+        MediaCategory.Game => "Developer",
+        MediaCategory.Anime => "Studio",
+        MediaCategory.Book or MediaCategory.Comic or MediaCategory.Manga or MediaCategory.Audiobook => "Author",
+        MediaCategory.Music => "Artist",
+        MediaCategory.Podcast => "Host",
+        _ => "Creator",
+    };
+
+    /// <summary>All known details as label / value rows for the details card.</summary>
+    public IReadOnlyList<Credit> DetailRows
+    {
+        get
+        {
+            var rows = new List<Credit>();
+            void Add(string label, string? value)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    rows.Add(new Credit { Role = label, Name = value });
+            }
+            Add("Year", Model.Year?.ToString(CultureInfo.InvariantCulture));
+            Add(CreatorLabel, Model.Creator);
+            Add("Length", Model.Length);
+            Add("Console", Platform?.Name);
+            rows.AddRange(Credits);
+            Add("Completed", DateText);
+            Add("List", List.Name);
+            return rows;
+        }
+    }
+
     /// <summary>Card thumbnail size: same shape rules as tiles, 46 px tall.</summary>
     public const double ThumbHeight = 46;
 

@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using MediaLog.ViewModels;
 
 namespace MediaLog.Views;
@@ -14,12 +16,52 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        // Press and hold an entry → details card (touch, mouse and pen alike).
+        AddHandler(PointerPressedEvent, OnEntryPressed);
+        AddHandler(PointerMovedEvent, OnEntryMoved, handledEventsToo: true);
+        AddHandler(PointerReleasedEvent, (_, _) => CancelHold(), handledEventsToo: true);
+        AddHandler(PointerCaptureLostEvent, (_, _) => CancelHold(), handledEventsToo: true);
         Nav.SelectionChanged += (_, _) =>
         {
             if (_compact == true && DataContext is MainViewModel vm)
                 vm.IsPaneOpen = false;
         };
     }
+
+    private static readonly System.TimeSpan HoldTime = System.TimeSpan.FromMilliseconds(500);
+    private const double HoldSlop = 10; // moving further than this is a scroll, not a hold
+
+    private int _holdId;
+    private Point _holdStart;
+    private bool _holding;
+
+    private async void OnEntryPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Only presses on an entry itself (its buttons handle their own presses and don't get here).
+        if (DataContext is not MainViewModel vm || vm.IsDetailsOpen || vm.Editor is not null
+            || (e.Source as StyledElement)?.DataContext is not EntryViewModel entry)
+            return;
+        var id = ++_holdId;
+        _holding = true;
+        _holdStart = e.GetPosition(this);
+        await System.Threading.Tasks.Task.Delay(HoldTime);
+        if (_holding && id == _holdId)
+        {
+            _holding = false;
+            vm.ShowDetailsCommand.Execute(entry);
+        }
+    }
+
+    private void OnEntryMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_holding)
+            return;
+        var delta = e.GetPosition(this) - _holdStart;
+        if (System.Math.Abs(delta.X) > HoldSlop || System.Math.Abs(delta.Y) > HoldSlop)
+            CancelHold();
+    }
+
+    private void CancelHold() => _holding = false;
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {

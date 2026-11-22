@@ -754,6 +754,22 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // ==========================================================================
+    // Details card (press and hold an entry)
+    // ==========================================================================
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDetailsOpen))]
+    public partial EntryViewModel? DetailEntry { get; set; }
+
+    public bool IsDetailsOpen => DetailEntry is not null;
+
+    [RelayCommand]
+    private void ShowDetails(EntryViewModel entry) => DetailEntry = entry;
+
+    [RelayCommand]
+    private void CloseDetails() => DetailEntry = null;
+
+    // ==========================================================================
     // Entry editor
     // ==========================================================================
 
@@ -765,7 +781,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsEditorOpen => Editor is not null;
 
     private void OpenEditor(EntryViewModel entry) =>
-        Editor = new EntryEditorViewModel(entry, Types, UserLists.ToList(), PlatformNames.ToList(), SaveEditor, DeleteEntry, () => Editor = null);
+        (DetailEntry, Editor) = (null, new EntryEditorViewModel(entry, Types, UserLists.ToList(), PlatformNames.ToList(), SaveEditor, DeleteEntry, () => Editor = null));
 
     private void SaveEditor(EntryEditorViewModel editor)
     {
