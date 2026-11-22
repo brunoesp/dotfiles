@@ -52,6 +52,9 @@ documentaries, audiobooks…
   the [libretro-thumbnails](https://github.com/libretro-thumbnails) box-art collection for that console,
   which is also searched for title suggestions once a retro console is set. Game titles are looked up
   with a full-text Wikidata search, so any words of the title match.
+- Title suggestions are word-based everywhere: words can be typed in any order and partially
+  ("a link to the pa" → *The Legend of Zelda: A Link to the Past*); results are ranked by how many
+  of the typed words they contain.
 
   ![games](docs/games.png)
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice

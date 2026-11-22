@@ -58,7 +58,7 @@ public static class MetadataService
         await foreach (var task in Task.WhenEach(tasks).WithCancellation(ct).ConfigureAwait(false))
         {
             var batch = (await task.ConfigureAwait(false))
-                .OrderBy(s => MatchRank(s.Title, query)) // stable: keeps each source's own order within a rank
+                .OrderByDescending(s => Math.Round(TitleMatch.Score(s.Title, query), 1)) // stable: keeps each source's order on ties
                 .Where(s => seen.Add($"{s.Title}|{s.Year}"))
                 .Take(Math.Min(perSource, MaxResults - total))
                 .ToList();
@@ -69,18 +69,6 @@ public static class MetadataService
                 yield break;
         }
     }
-
-    /// <summary>0 = same title, 1 = starts with the query, 2 = contains it, 3 = other.</summary>
-    private static int MatchRank(string title, string query)
-    {
-        var t = Normalize(title);
-        var q = Normalize(query);
-        return t == q ? 0 : t.StartsWith(q, StringComparison.Ordinal) ? 1 : t.Contains(q, StringComparison.Ordinal) ? 2 : 3;
-    }
-
-    /// <summary>Lower-case letters and digits only ("Your Name." → "yourname").</summary>
-    private static string Normalize(string text) =>
-        new(text.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
 
     /// <summary>Video games matching the title (Wikidata), with their original platform and box art.</summary>
     public static Task<List<MediaSuggestion>> GameMatchesAsync(string query, CancellationToken ct) =>
@@ -164,30 +152,27 @@ public static class MetadataService
     private static Source Wikidata(WikidataKind kind) => async (query, ct) =>
     {
         const string api = "https://www.wikidata.org/w/api.php?format=json&origin=*";
-        List<(string Id, string? Label, string? Description)> hits;
-        if (kind == WikidataKind.Game)
-        {
-            // Full-text search restricted to video games: any words of the title match
-            // ("zelda link to the past"), unlike the label-prefix entity search.
-            var filter = string.Join('|', GameClasses.Select(c => "P31=" + c));
-            using var search = await GetJsonAsync(
-                $"{api}&action=query&list=search&srnamespace=0&srlimit=12&srprop=" +
-                $"&srsearch={Uri.EscapeDataString($"{query} haswbstatement:{filter}")}", ct).ConfigureAwait(false);
-            hits = search.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
-                .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null))
-                .Where(h => h.Id is not null)
-                .ToList();
-        }
-        else
-        {
-            using var search = await GetJsonAsync(
-                $"{api}&action=wbsearchentities&type=item&language=en&uselang=en&limit=12&search={Uri.EscapeDataString(query)}", ct)
-                .ConfigureAwait(false);
-            hits = search.RootElement.GetProperty("search").EnumerateArray()
-                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description")))
-                .Where(h => h.Id is not null)
-                .ToList();
-        }
+        // Two searches in parallel:
+        //  • full-text, so any words of the title match in any order ("a link to the past"),
+        //    restricted to films / video games where that applies;
+        //  • the label search, which is best for titles typed from the start.
+        var kindClasses = kind switch { WikidataKind.Film => FilmClasses, WikidataKind.Game => GameClasses, _ => null };
+        var fullText = TitleMatch.FullTextQuery(query) +
+                       (kindClasses is null ? "" : " haswbstatement:" + string.Join('|', kindClasses.Select(c => "P31=" + c)));
+        var fullTextTask = SearchIdsAsync(
+            $"{api}&action=query&list=search&srnamespace=0&srlimit=10&srprop=&srsearch={Uri.EscapeDataString(fullText)}",
+            doc => doc.RootElement.GetProperty("query").GetProperty("search").EnumerateArray()
+                .Select(h => (Id: Str(h, "title")!, Label: (string?)null, Description: (string?)null)), ct);
+        var labelTask = SearchIdsAsync(
+            $"{api}&action=wbsearchentities&type=item&language=en&uselang=en&limit=10&search={Uri.EscapeDataString(query)}",
+            doc => doc.RootElement.GetProperty("search").EnumerateArray()
+                .Select(h => (Id: Str(h, "id")!, Label: Str(h, "label"), Description: Str(h, "description"))), ct);
+        var both = await Task.WhenAll(fullTextTask, labelTask).ConfigureAwait(false);
+        var hits = both[0].Concat(both[1])
+            .Where(h => h.Id is { Length: > 1 } && h.Id[0] == 'Q')
+            .DistinctBy(h => h.Id)
+            .Take(15)
+            .ToList();
         if (hits.Count == 0)
             return [];
 
@@ -266,6 +251,20 @@ public static class MetadataService
                 i.PlatformId is { } p ? names.GetValueOrDefault(p) : null))
             .ToList();
     };
+
+    private static async Task<List<(string Id, string? Label, string? Description)>> SearchIdsAsync(string url,
+        Func<JsonDocument, IEnumerable<(string Id, string? Label, string? Description)>> read, CancellationToken ct)
+    {
+        try
+        {
+            using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
+            return read(doc).ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return [];
+        }
+    }
 
     private static string? EnglishText(JsonElement entity, string property) =>
         entity.TryGetProperty(property, out var values) && values.TryGetProperty("en", out var en) ? Str(en, "value") : null;

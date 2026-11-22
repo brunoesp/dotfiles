@@ -31,7 +31,24 @@ public static partial class RetroBoxArt
     public static async Task<List<ImageResult>> SearchAsync(string title, string repo, CancellationToken ct)
     {
         var index = await IndexAsync(repo, ct).ConfigureAwait(false);
-        var names = index is not null ? Match(index, title) : await GuessAsync(title, repo, ct).ConfigureAwait(false);
+        List<string> names;
+        if (index is not null)
+        {
+            names = Match(index, title);
+        }
+        else
+        {
+            // Without the title list, file names have to be guessed from the full title. Words typed
+            // in any order ("a link to the past") are first resolved to full titles via Wikidata.
+            names = await GuessAsync(title, repo, ct).ConfigureAwait(false);
+            if (names.Count == 0)
+            {
+                var full = (await MetadataService.GameMatchesAsync(title, ct).ConfigureAwait(false))
+                    .Select(s => s.Title).Distinct().Take(3).ToList();
+                var guesses = await Task.WhenAll(full.Select(t => GuessAsync(t, repo, ct))).ConfigureAwait(false);
+                names = guesses.SelectMany(g => g).Distinct().ToList();
+            }
+        }
         return names.Select(n => new ImageResult(Url(repo, n), Path.GetFileNameWithoutExtension(n), "libretro")).ToList();
     }
 
@@ -126,33 +143,19 @@ public static partial class RetroBoxArt
     [GeneratedRegex(@"\s*[\(\[][^\)\]]*[\)\]]")]
     private static partial Regex Tags();
 
-    /// <summary>"Legend of Zelda, The - A Link to the Past (USA).png" → "thelegendofzeldaalinktothepast".</summary>
-    private static string Key(string name)
-    {
-        var bare = Tags().Replace(Path.GetFileNameWithoutExtension(name), "");
-        // "Title, The - Subtitle" → "The Title - Subtitle"
-        var article = Regex.Match(bare, @"^(.*?), (The|A|An)( - .*)?$");
-        if (article.Success)
-            bare = $"{article.Groups[2].Value} {article.Groups[1].Value}{article.Groups[3].Value}";
-        return Platforms.Normalize(bare);
-    }
 
     private static int RegionRank(string name) =>
         name.Contains("(USA") ? 0 : name.Contains("(World") ? 1 : name.Contains("Europe") ? 2 : name.Contains("Japan") ? 3 : 4;
 
     private static List<string> Match(string[] index, string title)
     {
-        var query = Platforms.Normalize(title);
-        if (query.Length == 0)
+        if (TitleMatch.Words(title).Length == 0)
             return [];
-        var words = title.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select(Platforms.Normalize).Where(w => w.Length > 1).ToArray();
+        // Word-based, any order: "a link to the past" finds "Legend of Zelda, The - A Link to the Past (USA)".
         return index
-            .Select(n => (Name: n, Key: Key(n)))
-            .Select(x => (x.Name, Score: x.Key == query ? 0 : x.Key.StartsWith(query) ? 1 : x.Key.Contains(query) ? 2
-                : words.Length > 0 && words.All(w => x.Key.Contains(w)) ? 3 : 9))
-            .Where(x => x.Score < 9)
-            .OrderBy(x => x.Score).ThenBy(x => RegionRank(x.Name)).ThenBy(x => x.Name.Length)
+            .Select(n => (Name: n, Score: TitleMatch.Score(DisplayTitle(Path.GetFileNameWithoutExtension(n)), title)))
+            .Where(x => x.Score >= 0.75)
+            .OrderByDescending(x => Math.Round(x.Score, 2)).ThenBy(x => RegionRank(x.Name)).ThenBy(x => x.Name.Length)
             .Take(8)
             .Select(x => x.Name)
             .ToList();
