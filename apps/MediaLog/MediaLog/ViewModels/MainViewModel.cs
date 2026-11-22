@@ -37,6 +37,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (_library.Types.Count == 0)
             _library.Types.AddRange(MediaTypeDef.Defaults());
+        UpgradeDefaultColors();
         RebuildTypes();
         if (_library.Platforms.Count == 0)
             _library.Platforms.AddRange(Services.Platforms.Defaults());
@@ -74,6 +75,26 @@ public partial class MainViewModel : ViewModelBase
         _typeById.TryGetValue(id, out var type)
             ? type
             : new MediaTypeInfo(new MediaTypeDef { Id = id, Label = id, Color = "#78909C", Icon = "dots" });
+
+    /// <summary>Moves built-in types still on an old default color to the current, more distinct palette.</summary>
+    private void UpgradeDefaultColors()
+    {
+        var defaults = MediaTypeDef.Defaults().ToDictionary(d => d.Id);
+        var changed = false;
+        foreach (var def in _library.Types)
+        {
+            if (defaults.TryGetValue(def.Id, out var current)
+                && MediaTypeDef.PreviousDefaultColors.TryGetValue(def.Id, out var previous)
+                && previous.Contains(def.Color, StringComparer.OrdinalIgnoreCase)
+                && !string.Equals(def.Color, current.Color, StringComparison.OrdinalIgnoreCase))
+            {
+                def.Color = current.Color;
+                changed = true;
+            }
+        }
+        if (changed)
+            Persist();
+    }
 
     private void RebuildTypes()
     {
@@ -742,10 +763,12 @@ public partial class MainViewModel : ViewModelBase
 
     public static IReadOnlyList<PaletteColor> Palette { get; } =
     [
-        new("#FF1744"), new("#FF4FA3"), new("#F000B8"), new("#D500F9"), new("#AA00FF"), new("#651FFF"),
-        new("#2962FF"), new("#00B0FF"), new("#00E5FF"), new("#00BFA5"), new("#00C853"), new("#64DD17"),
-        new("#9ACD00"), new("#FFC400"), new("#FF9100"), new("#FF6D00"), new("#DD2C00"), new("#8D6E63"),
-        new("#78909C"), new("#455A64"),
+        // the type defaults (chosen to be far apart) …
+        new("#F00020"), new("#FF7A00"), new("#FFC800"), new("#8BC700"), new("#00D84A"), new("#00956A"),
+        new("#18D4F0"), new("#0A6CFF"), new("#5B21FF"), new("#9C00B8"), new("#E600FF"), new("#FF4FA8"),
+        // … and a few more vivid / deep options
+        new("#FF5A36"), new("#B8860B"), new("#00B3B3"), new("#1A237E"), new("#C2185B"), new("#6D4C41"),
+        new("#8C8C9E"), new("#37474F"),
     ];
 
     public static IReadOnlyList<TypeIcon> IconOptions => TypeIcons.All;
