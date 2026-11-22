@@ -24,7 +24,8 @@ documentaries, audiobooks…
   Games and movies also get **credits** from Wikidata and the English Wikipedia infobox (director,
   producer, designer, programmer, artist, composer, publisher, series, genre; writer, cast,
   cinematography and editor for movies), also filled in when a box-art match is picked.
-  Sources (free, no keys) by type: Wikidata (movies, documentaries, games, other), Steam (modern
+  Sources (free, no keys) by type: IMDb (movies, series), Wikidata (movies, documentaries, games,
+  other), Steam (modern
   games: developer, publisher, year, genres, cover art), TVmaze (series),
   AniList (anime, manga), Google Books / Open Library / iTunes (books, comics), iTunes (albums,
   podcasts, audiobooks).

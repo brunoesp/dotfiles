@@ -239,7 +239,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="*,Auto,Auto">
+    <Grid x:Name="Root" RowDefinitions="*,Auto,Auto">
         <SplitView x:Name="Split"
                    IsPaneOpen="{Binding IsPaneOpen, Mode=TwoWay}"
                    DisplayMode="Inline"

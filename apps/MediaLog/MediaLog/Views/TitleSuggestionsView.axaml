@@ -19,6 +19,8 @@
             </Grid>
             <TextBlock Text="No matches found online. You can still add it as typed." Classes="subtle" FontSize="12"
                        Margin="12,2,12,10" IsVisible="{Binding IsEmpty}" TextWrapping="Wrap" />
+            <!-- up to 30 matches: scroll inside the list for more -->
+            <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Items}" Margin="4,0,4,4">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:SuggestionViewModel">
@@ -38,6 +40,7 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </ScrollViewer>
         </StackPanel>
     </Border>
 </UserControl>

@@ -32,7 +32,7 @@ public sealed record MediaSuggestion(
 /// </summary>
 public static class MetadataService
 {
-    private const int MaxResults = 10;
+    private const int MaxResults = 30;
 
     /// <summary>Open Library in particular can take a few seconds; anything slower is skipped.</summary>
     private static readonly TimeSpan SourceTimeout = TimeSpan.FromSeconds(8);
@@ -56,7 +56,7 @@ public static class MetadataService
             sources = [.. sources, RetroTitles(repo, platform!)];
         var tasks = sources.Select(s => SafeAsync(s, query, ct)).ToList();
         // With several sources, cap each so a fast one doesn't crowd out the others.
-        var perSource = sources.Length > 1 ? 5 : MaxResults;
+        var perSource = sources.Length > 1 ? 12 : MaxResults;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var total = 0;
         await foreach (var task in Task.WhenEach(tasks).WithCancellation(ct).ConfigureAwait(false))
@@ -157,9 +157,9 @@ public static class MetadataService
 
     private static Source[] SourcesFor(MediaCategory category) => category switch
     {
-        MediaCategory.Film => [Wikidata(WikidataKind.Film), ITunesMovies],
-        MediaCategory.Series => [TvMaze],
-        MediaCategory.Anime => [AniList("ANIME")],
+        MediaCategory.Film => [Imdb(ImdbKind.Film), Wikidata(WikidataKind.Film), ITunesMovies],
+        MediaCategory.Series => [Imdb(ImdbKind.Series), TvMaze],
+        MediaCategory.Anime => [AniList("ANIME"), Imdb(ImdbKind.Any)],
         MediaCategory.Manga => [AniList("MANGA"), GoogleBooks, OpenLibrary],
         MediaCategory.Book => [GoogleBooks, OpenLibrary, ITunes("ebook", "ebook", null)],
         MediaCategory.Comic => [GoogleBooks, OpenLibrary, ITunes("ebook", "ebook", null)],
@@ -492,6 +492,51 @@ public static class MetadataService
             .GroupBy(s => s.Title, StringComparer.OrdinalIgnoreCase) // one per title (best region first)
             .Select(g => g.First())
             .ToList();
+
+    // --- IMDb: movies and series (the search-as-you-type service; no key needed) -------------
+
+    public enum ImdbKind { Film, Series, Any }
+
+    /// <summary>IMDb's own title search: fast, current and accurate for movies and series.</summary>
+    public static Func<string, CancellationToken, Task<List<MediaSuggestion>>> ImdbSearch(ImdbKind kind) =>
+        (q, ct) => Imdb(kind)(q, ct);
+
+    private static Source Imdb(ImdbKind kind) => async (query, ct) =>
+    {
+        var q = query.Trim().ToLowerInvariant();
+        if (q.Length == 0)
+            return [];
+        var first = char.IsLetterOrDigit(q[0]) ? q[0] : 'x';
+        using var doc = await GetJsonAsync(
+            $"https://v3.sg.media-imdb.com/suggestion/{first}/{Uri.EscapeDataString(q)}.json", ct).ConfigureAwait(false);
+        if (!doc.RootElement.TryGetProperty("d", out var items))
+            return [];
+        var results = new List<MediaSuggestion>();
+        foreach (var item in items.EnumerateArray())
+        {
+            // People and companies have no title type.
+            if (Str(item, "qid") is not { } qid || Str(item, "l") is not { } title)
+                continue;
+            var wanted = kind switch
+            {
+                ImdbKind.Film => qid is "movie" or "tvMovie" or "video" or "short" or "tvSpecial",
+                ImdbKind.Series => qid is "tvSeries" or "tvMiniSeries",
+                _ => qid is not "videoGame" and not "podcastSeries",
+            };
+            if (!wanted)
+                continue;
+            var image = item.TryGetProperty("i", out var i) ? Str(i, "imageUrl") : null;
+            // IMDb's poster URLs accept a size suffix: ask for a reasonably sized one.
+            if (image is not null && image.EndsWith("._V1_.jpg", StringComparison.Ordinal))
+                image = image[..^"._V1_.jpg".Length] + "._V1_UX500_.jpg";
+            var stars = Str(item, "s");
+            var credits = string.IsNullOrWhiteSpace(stars) ? null : new List<Credit> { new() { Role = "Starring", Name = stars } };
+            // The main cast (shown under the suggestion) helps tell same-named films apart.
+            results.Add(new MediaSuggestion(title, Int(item, "y"), null, null, image, "IMDb",
+                string.IsNullOrWhiteSpace(stars) ? Str(item, "q") : stars, null, credits));
+        }
+        return results;
+    };
 
     // --- Steam: modern (PC) games — store search + app details, no key needed ----------------
 

@@ -63,8 +63,8 @@ public static class ImageSearchService
 
     private static Source[] SourcesFor(MediaCategory category) => category switch
     {
-        MediaCategory.Film => [ITunes("movie", "movie"), Wikipedia, TvMaze],
-        MediaCategory.Series => [TvMaze, Wikipedia],
+        MediaCategory.Film => [ImdbPosters(MetadataService.ImdbKind.Film), ITunes("movie", "movie"), Wikipedia, TvMaze],
+        MediaCategory.Series => [ImdbPosters(MetadataService.ImdbKind.Series), TvMaze, Wikipedia],
         MediaCategory.Anime => [AniList("ANIME"), Jikan("anime"), TvMaze, Wikipedia],
         MediaCategory.Book => [OpenLibrary, ITunes("ebook", "ebook"), Wikipedia],
         MediaCategory.Manga => [AniList("MANGA"), Jikan("manga"), OpenLibrary, Wikipedia],
@@ -130,6 +130,14 @@ public static class ImageSearchService
         }
         return results.OrderBy(r => r.Index).Select(r => r.Result).ToList();
     }
+
+    // --- IMDb posters ----------------------------------------------------------------------
+
+    private static Source ImdbPosters(MetadataService.ImdbKind kind) => async (query, ct) =>
+        (await MetadataService.ImdbSearch(kind)(query, ct).ConfigureAwait(false))
+            .Where(s => s.ImageUrl is not null)
+            .Select(s => new ImageResult(s.ImageUrl!, s.Year is { } y ? $"{s.Title} ({y})" : s.Title, "IMDb"))
+            .ToList();
 
     // --- Steam: portrait cover art of modern games -----------------------------------------
 

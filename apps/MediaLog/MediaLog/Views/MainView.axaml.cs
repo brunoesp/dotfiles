@@ -97,6 +97,60 @@ public partial class MainView : UserControl
         }
     }
 
+    // --- On-screen keyboard: keep what's being typed visible ------------------------------------
+
+    private Avalonia.Controls.Platform.IInputPane? _inputPane;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _inputPane = TopLevel.GetTopLevel(this)?.InputPane;
+        if (_inputPane is not null)
+            _inputPane.StateChanged += OnInputPaneChanged;
+        AddHandler(GotFocusEvent, OnFieldFocused);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_inputPane is not null)
+            _inputPane.StateChanged -= OnInputPaneChanged;
+        _inputPane = null;
+        RemoveHandler(GotFocusEvent, OnFieldFocused);
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    /// <summary>
+    /// The keyboard opened or closed: leave room for it at the bottom (so the content and any
+    /// open dialog shrink above it) and scroll the field being typed in into view. If the system
+    /// already resized the window, the keyboard doesn't overlap it and nothing is added.
+    /// </summary>
+    private void OnInputPaneChanged(object? sender, Avalonia.Controls.Platform.InputPaneStateEventArgs e)
+    {
+        var overlap = 0.0;
+        if (e.NewState == Avalonia.Controls.Platform.InputPaneState.Open && e.EndRect.Height > 0)
+        {
+            var top = TopLevel.GetTopLevel(this);
+            var origin = top is not null ? this.TranslatePoint(default, top) ?? default : default;
+            var bottom = origin.Y + Bounds.Height;
+            overlap = System.Math.Max(0, bottom - e.EndRect.Top);
+        }
+        Root.Margin = new Thickness(0, 0, 0, overlap);
+        if (overlap > 0)
+            BringFocusedIntoView();
+    }
+
+    private void OnFieldFocused(object? sender, Avalonia.Input.FocusChangedEventArgs e)
+    {
+        if (e.Source is TextBox && _inputPane?.State == Avalonia.Controls.Platform.InputPaneState.Open)
+            BringFocusedIntoView();
+    }
+
+    private void BringFocusedIntoView() =>
+        // After the new bottom space has been laid out.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Control)?.BringIntoView(),
+            Avalonia.Threading.DispatcherPriority.Background);
+
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
