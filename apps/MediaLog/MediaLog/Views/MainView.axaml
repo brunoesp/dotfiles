@@ -344,7 +344,8 @@
                                                 <Panel>
                                                     <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
                                                                   Width="44" Height="44" StrokeThickness="1.8" />
-                                                    <Image Source="{Binding Image}" Stretch="UniformToFill" IsVisible="{Binding HasImage}" />
+                                                    <!-- the cover box has the image's own shape; Uniform never crops -->
+                                                    <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
                                                     <!-- console badge -->
                                                     <Border Classes="platformBadge large" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}"
                                                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">

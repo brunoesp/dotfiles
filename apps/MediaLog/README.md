@@ -37,9 +37,9 @@ documentaries, audiobooks…
 - **Editing** – the **Edit** button at the top shows edit / delete buttons on every entry (hidden
   otherwise); the pencil opens an editor for title, type, date and list (moving it
   between lists), plus a **cover image**: *Find images* searches online by title and shows a grid of
-  suggestions to pick from (or paste any image link). Covers show in tiles mode — the tile follows the chosen image: 1:1 for square-ish art (albums,
-  podcasts, most retro game boxes, with a roomier info layout) and 2:3 for posters and book covers —
-  and as the entry badge,
+  suggestions to pick from (or paste any image link). Covers show in tiles mode — uncropped, each tile taking the image's own shape (wide SNES / N64
+  boxes, tall posters, square album art; square-ish covers get a roomier info layout) — and as the
+  entry badge,
   and are cached on disk so they work offline.
   Image sources (free, no API keys), chosen by type: Wikipedia, TVmaze (series), Open Library (books),
   iTunes (albums, podcasts, audiobooks, ebooks, movies), AniList and Jikan/MyAnimeList (anime, manga).

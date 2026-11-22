@@ -81,8 +81,14 @@ public partial class EntryViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Cover height ÷ width for tiles.</summary>
-    public double CoverRatio => IsSquareCover ? 1.0 : 1.5;
+    /// <summary>
+    /// Cover height ÷ width for tiles: the image's own shape, so covers are shown whole
+    /// (wide SNES / N64 boxes, tall Genesis cases…), within sensible limits.
+    /// </summary>
+    public double CoverRatio =>
+        Image is { PixelSize: { Width: > 0, Height: > 0 } size }
+            ? Math.Clamp((double)size.Height / size.Width, 0.55, 1.8)
+            : IsSquareCover ? 1.0 : 1.5;
 
     public string DateText => Model.CompletedOn.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
 
