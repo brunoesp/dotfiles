@@ -14,8 +14,10 @@ public partial class EntryEditorViewModel : ViewModelBase
     private readonly Action _close;
 
     public EntryEditorViewModel(EntryViewModel entry, IReadOnlyList<MediaTypeInfo> types, IReadOnlyList<ListViewModel> lists,
-        Action<EntryEditorViewModel> save, Action<EntryViewModel> delete, Action close)
+        IReadOnlyList<string> platformNames, Action<EntryEditorViewModel> save, Action<EntryViewModel> delete, Action close)
     {
+        PlatformNames = platformNames;
+        PlatformText = entry.Model.Platform ?? "";
         Entry = entry;
         Types = types;
         Lists = lists;
@@ -30,7 +32,7 @@ public partial class EntryEditorViewModel : ViewModelBase
         YearText = entry.Model.Year?.ToString() ?? "";
         Creator = entry.Model.Creator ?? "";
         Length = entry.Model.Length ?? "";
-        Cover = new CoverPickerViewModel(entry.Model.ImageUrl, entry.Image, entry.Model.Name, () => Type);
+        Cover = new CoverPickerViewModel(entry.Model.ImageUrl, entry.Image, entry.Model.Name, () => Type, () => PlatformText);
         Suggestions = new TitleSuggestionsViewModel(() => Type, ApplySuggestion);
         // No cover yet: start suggesting right away.
         if (!Cover.HasImage)
@@ -44,6 +46,16 @@ public partial class EntryEditorViewModel : ViewModelBase
 
     /// <summary>Online matches for the title ("Look up").</summary>
     public TitleSuggestionsViewModel Suggestions { get; }
+
+    /// <summary>Known console names for the picker; a new name is added on save.</summary>
+    public IReadOnlyList<string> PlatformNames { get; }
+
+    [ObservableProperty]
+    public partial string PlatformText { get; set; }
+
+    public bool IsGame => Services.MediaCategories.Of(Type) == Services.MediaCategory.Game;
+
+    partial void OnTypeChanged(MediaTypeInfo value) => OnPropertyChanged(nameof(IsGame));
 
     [ObservableProperty]
     public partial string YearText { get; set; }
@@ -68,6 +80,8 @@ public partial class EntryEditorViewModel : ViewModelBase
             Creator = creator;
         if (suggestion.Length is { } length)
             Length = length;
+        if (suggestion.Platform is { } platform && string.IsNullOrWhiteSpace(PlatformText))
+            PlatformText = platform;
         if (suggestion.ImageUrl is { } url)
         {
             Cover.SelectedResult = null;

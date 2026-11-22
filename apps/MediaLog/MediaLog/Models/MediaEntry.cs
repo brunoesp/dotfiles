@@ -20,6 +20,9 @@ public sealed class MediaEntry
     /// <summary>Running time, page count, number of episodes… as display text.</summary>
     public string? Length { get; set; }
 
+    /// <summary>Console / platform name (games), matching a <see cref="PlatformDef"/>.</summary>
+    public string? Platform { get; set; }
+
     /// <summary>Optional cover / poster image chosen by the user.</summary>
     public string? ImageUrl { get; set; }
 }

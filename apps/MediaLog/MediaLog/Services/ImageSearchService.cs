@@ -31,14 +31,18 @@ public static class ImageSearchService
     /// Queries all suitable sources in parallel and yields each source's results as soon as it
     /// answers (fast sources first), de-duplicated and capped at <see cref="MaxResults"/>.
     /// </summary>
+    /// <param name="platform">Console of a game; retro consoles get box art from libretro.</param>
     public static async IAsyncEnumerable<IReadOnlyList<ImageResult>> SearchAsync(string query, MediaTypeInfo? type,
-        [EnumeratorCancellation] CancellationToken ct)
+        string? platform, [EnumeratorCancellation] CancellationToken ct)
     {
         query = query.Trim();
         if (query.Length == 0)
             yield break;
 
-        var tasks = SourcesFor(MediaCategories.Of(type)).Select(source => SafeAsync(source, query, ct)).ToList();
+        var sources = SourcesFor(MediaCategories.Of(type)).ToList();
+        if (MediaCategories.Of(type) == MediaCategory.Game && Platforms.BoxArtRepo(platform) is { } repo)
+            sources.Insert(0, (q, c) => RetroBoxArt.SearchAsync(q, repo, c));
+        var tasks = sources.Select(source => SafeAsync(source, query, ct)).ToList();
         var seen = new HashSet<string>();
         var total = 0;
         await foreach (var task in Task.WhenEach(tasks).WithCancellation(ct).ConfigureAwait(false))
@@ -65,7 +69,7 @@ public static class ImageSearchService
         MediaCategory.Book => [OpenLibrary, ITunes("ebook", "ebook"), Wikipedia],
         MediaCategory.Manga => [AniList("MANGA"), Jikan("manga"), OpenLibrary, Wikipedia],
         MediaCategory.Comic => [OpenLibrary, Wikipedia],
-        MediaCategory.Game => [Wikipedia, WikipediaWith("video game")],
+        MediaCategory.Game => [WikidataGames, Wikipedia, WikipediaWith("video game")],
         MediaCategory.Music => [ITunes("music", "album"), Wikipedia],
         MediaCategory.Podcast => [ITunes("podcast", "podcast"), Wikipedia],
         MediaCategory.Audiobook => [ITunes("audiobook", "audiobook"), OpenLibrary, Wikipedia],
@@ -124,6 +128,14 @@ public static class ImageSearchService
         }
         return results.OrderBy(r => r.Index).Select(r => r.Result).ToList();
     }
+
+    // --- Wikidata game matches → their Wikipedia box art -------------------------------------
+
+    private static async Task<List<ImageResult>> WikidataGames(string query, CancellationToken ct) =>
+        (await MetadataService.GameMatchesAsync(query, ct).ConfigureAwait(false))
+            .Where(s => s.ImageUrl is not null)
+            .Select(s => new ImageResult(s.ImageUrl!, s.Title, "Wikipedia"))
+            .ToList();
 
     // --- iTunes Search: albums, podcasts, books, audiobooks, movies ------------------------
 

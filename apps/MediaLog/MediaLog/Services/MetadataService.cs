@@ -17,7 +17,8 @@ namespace MediaLog.Services;
 /// <param name="Creator">Director, author, developer, artist, studio… depending on the media.</param>
 /// <param name="Length">Running time, pages, episodes, tracks… as display text.</param>
 public sealed record MediaSuggestion(
-    string Title, int? Year, string? Creator, string? Length, string? ImageUrl, string Source, string? Description = null)
+    string Title, int? Year, string? Creator, string? Length, string? ImageUrl, string Source, string? Description = null,
+    string? Platform = null)
 {
     /// <summary>"2024 · Denis Villeneuve · 2h 46m"</summary>
     public string Details => string.Join(" · ",
@@ -77,6 +78,10 @@ public static class MetadataService
     /// <summary>Lower-case letters and digits only ("Your Name." → "yourname").</summary>
     private static string Normalize(string text) =>
         new(text.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    /// <summary>Video games matching the title (Wikidata), with their original platform and box art.</summary>
+    public static Task<List<MediaSuggestion>> GameMatchesAsync(string query, CancellationToken ct) =>
+        Wikidata(WikidataKind.Game)(query, ct);
 
     private static Source[] SourcesFor(MediaCategory category) => category switch
     {
@@ -178,7 +183,7 @@ public static class MetadataService
             _ => ["P57", "P50", "P178", "P175", "P170", "P86"],
         };
 
-        var items = new List<(string Label, string? Description, int? Year, string? CreatorId, string? Length, string? Article)>();
+        var items = new List<(string Label, string? Description, int? Year, string? CreatorId, string? Length, string? Article, string? PlatformId)>();
         foreach (var hit in hits)
         {
             if (!all.TryGetProperty(hit.Id, out var entity) || !entity.TryGetProperty("claims", out var claims))
@@ -206,14 +211,16 @@ public static class MetadataService
             string? article = null;
             if (entity.TryGetProperty("sitelinks", out var links) && links.TryGetProperty("enwiki", out var enwiki))
                 article = Str(enwiki, "title");
-            items.Add((hit.Label, hit.Description, year, creatorId, length, article));
+            var platformId = kind == WikidataKind.Game ? ItemIds(claims, "P400").FirstOrDefault() : null;
+            items.Add((hit.Label, hit.Description, year, creatorId, length, article, platformId));
         }
         if (items.Count == 0)
             return [];
 
         // Names of the directors / developers / authors…
         var names = new Dictionary<string, string>();
-        var creatorIds = items.Select(i => i.CreatorId).OfType<string>().Distinct().Take(50).ToList();
+        var creatorIds = items.Select(i => i.CreatorId).Concat(items.Select(i => i.PlatformId))
+            .OfType<string>().Distinct().Take(50).ToList();
         if (creatorIds.Count > 0)
         {
             using var labels = await GetJsonAsync(
@@ -230,7 +237,8 @@ public static class MetadataService
 
         return items.Select(i => new MediaSuggestion(
                 i.Label, i.Year, i.CreatorId is { } id ? names.GetValueOrDefault(id) : null, i.Length,
-                i.Article is { } a ? images.GetValueOrDefault(a) : null, "Wikidata", i.Description))
+                i.Article is { } a ? images.GetValueOrDefault(a) : null, "Wikidata", i.Description,
+                i.PlatformId is { } p ? names.GetValueOrDefault(p) : null))
             .ToList();
     };
 

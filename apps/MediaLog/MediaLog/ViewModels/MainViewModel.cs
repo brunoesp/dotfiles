@@ -38,6 +38,9 @@ public partial class MainViewModel : ViewModelBase
         if (_library.Types.Count == 0)
             _library.Types.AddRange(MediaTypeDef.Defaults());
         RebuildTypes();
+        if (_library.Platforms.Count == 0)
+            _library.Platforms.AddRange(Services.Platforms.Defaults());
+        RebuildPlatforms();
 
         Master = ListViewModel.CreateMaster(_ => ToggleTypesExpanded());
         Master.IsExpanded = _library.Settings.TypesExpanded;
@@ -100,6 +103,54 @@ public partial class MainViewModel : ViewModelBase
             }
         }
     }
+
+    // ==========================================================================
+    // Consoles (games)
+    // ==========================================================================
+
+    private readonly Dictionary<string, PlatformInfo> _platformByName = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Known console names, offered by the console pickers.</summary>
+    public ObservableCollection<string> PlatformNames { get; } = [];
+
+    private void RebuildPlatforms()
+    {
+        _platformByName.Clear();
+        PlatformNames.Clear();
+        foreach (var def in _library.Platforms)
+        {
+            _platformByName[def.Name] = new PlatformInfo(def);
+            PlatformNames.Add(def.Name);
+        }
+    }
+
+    private PlatformInfo? PlatformFor(string? name) =>
+        name is { Length: > 0 } ? _platformByName.GetValueOrDefault(name) : null;
+
+    /// <summary>
+    /// Resolves typed console text to a known platform ("snes" → "Super Nintendo"),
+    /// adding a new one when it isn't known yet. Returns <c>null</c> for empty text.
+    /// </summary>
+    private string? EnsurePlatform(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+        if (Services.Platforms.Find(_library.Platforms, text) is { } known)
+            return known.Name;
+        var created = Services.Platforms.Create(text);
+        if (Services.Platforms.Find(_library.Platforms, created.Name) is { } existing)
+            return existing.Name;
+        _library.Platforms.Add(created);
+        RebuildPlatforms();
+        Persist();
+        return created.Name;
+    }
+
+    /// <summary>Console typed in the add bar (games only).</summary>
+    [ObservableProperty]
+    public partial string NewPlatform { get; set; } = "";
+
+    public bool IsNewGame => Services.MediaCategories.Of(NewType) == Services.MediaCategory.Game;
 
     // ==========================================================================
     // Per-type lists under "All media"
@@ -341,6 +392,7 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnNewTypeChanged(MediaTypeInfo? value)
     {
+        OnPropertyChanged(nameof(IsNewGame));
         // Different type, different databases: look the title up again.
         if (NewSuggestions is { IsOpen: true })
             NewSuggestions.SearchNow(NewName);
@@ -352,6 +404,8 @@ public partial class MainViewModel : ViewModelBase
         NewName = suggestion.Title;
         _applyingSuggestion = false;
         NewDetails = suggestion;
+        if (suggestion.Platform is { } platform && string.IsNullOrWhiteSpace(NewPlatform))
+            NewPlatform = Services.Platforms.Find(_library.Platforms, platform)?.Name ?? platform;
         if (suggestion.ImageUrl is { } url)
         {
             NewCover.ImageUrl = url;
@@ -380,7 +434,7 @@ public partial class MainViewModel : ViewModelBase
 
     private string _newCoverQuery = "";
 
-    private CoverPickerViewModel CreateNewCover() => new(null, null, "", () => NewType);
+    private CoverPickerViewModel CreateNewCover() => new(null, null, "", () => NewType, () => NewPlatform);
 
     [RelayCommand]
     private void OpenNewCover()
@@ -438,11 +492,13 @@ public partial class MainViewModel : ViewModelBase
         {
             Name = NewName.Trim(), Kind = type.Id, CompletedOn = date, ImageUrl = imageUrl,
             Year = details?.Year, Creator = details?.Creator, Length = details?.Length,
+            Platform = IsNewGame ? EnsurePlatform(NewPlatform) : null,
         });
         if (imageUrl is not null)
             _ = ImageCache.SaveToDiskAsync(imageUrl);
         NewName = "";
         NewDetails = null;
+        // The console is kept: several games for the same console are often logged in a row.
         NewSuggestions.Dismiss();
         NewCover.CancelSearch();
         NewCover = CreateNewCover();
@@ -527,7 +583,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsEditorOpen => Editor is not null;
 
     private void OpenEditor(EntryViewModel entry) =>
-        Editor = new EntryEditorViewModel(entry, Types, UserLists.ToList(), SaveEditor, DeleteEntry, () => Editor = null);
+        Editor = new EntryEditorViewModel(entry, Types, UserLists.ToList(), PlatformNames.ToList(), SaveEditor, DeleteEntry, () => Editor = null);
 
     private void SaveEditor(EntryEditorViewModel editor)
     {
@@ -540,6 +596,7 @@ public partial class MainViewModel : ViewModelBase
         entry.Year = int.TryParse(editor.YearText?.Trim(), out var year) ? year : null;
         entry.Creator = string.IsNullOrWhiteSpace(editor.Creator) ? null : editor.Creator.Trim();
         entry.Length = string.IsNullOrWhiteSpace(editor.Length) ? null : editor.Length.Trim();
+        entry.Platform = editor.IsGame ? EnsurePlatform(editor.PlatformText) : null;
         if (entry.ImageUrl is { } url)
             _ = ImageCache.SaveToDiskAsync(url);
 
@@ -882,7 +939,8 @@ public partial class MainViewModel : ViewModelBase
 
             Entries.Clear();
             foreach (var (entry, list) in visible)
-                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor)
+                Entries.Add(new EntryViewModel(entry, TypeFor(entry.Kind), list, list != SelectedNav, DeleteEntry, OpenEditor,
+                    PlatformFor(entry.Platform))
                     { ShowActions = IsEditMode });
 
             var noun = ScopeCount == 1 ? "item" : "items";

@@ -16,8 +16,9 @@ public partial class EntryViewModel : ViewModelBase
     private readonly Action<EntryViewModel> _edit;
 
     public EntryViewModel(MediaEntry model, MediaTypeInfo type, ListViewModel list, bool showList,
-        Action<EntryViewModel> delete, Action<EntryViewModel> edit)
+        Action<EntryViewModel> delete, Action<EntryViewModel> edit, PlatformInfo? platform = null)
     {
+        Platform = platform;
         Model = model;
         Type = type;
         List = list;
@@ -33,6 +34,11 @@ public partial class EntryViewModel : ViewModelBase
     public ListViewModel List { get; }
 
     public MediaTypeInfo Type { get; }
+
+    /// <summary>Console badge (games).</summary>
+    public PlatformInfo? Platform { get; }
+
+    public bool HasPlatform => Platform is not null;
 
     /// <summary>Whether the owning list name is shown (when it differs from the list being viewed).</summary>
     public bool ShowList { get; }

@@ -48,12 +48,15 @@ public partial class ImageResultViewModel : ViewModelBase
 public partial class CoverPickerViewModel : ViewModelBase
 {
     private readonly Func<MediaTypeInfo?> _type;
+    private readonly Func<string?> _platform;
     private CancellationTokenSource? _search;
 
     /// <param name="type">Media type used to pick suitable image sources.</param>
-    public CoverPickerViewModel(string? imageUrl, Bitmap? image, string query, Func<MediaTypeInfo?> type)
+    /// <param name="platform">Console (games): retro consoles search libretro box art.</param>
+    public CoverPickerViewModel(string? imageUrl, Bitmap? image, string query, Func<MediaTypeInfo?> type, Func<string?> platform)
     {
         _type = type;
+        _platform = platform;
         ImageUrl = imageUrl;
         Image = image;
         SearchQuery = query;
@@ -110,7 +113,7 @@ public partial class CoverPickerViewModel : ViewModelBase
         try
         {
             // Show each source's suggestions as soon as they arrive.
-            await foreach (var batch in ImageSearchService.SearchAsync(SearchQuery, _type(), cts.Token))
+            await foreach (var batch in ImageSearchService.SearchAsync(SearchQuery, _type(), _platform(), cts.Token))
             {
                 if (cts.IsCancellationRequested)
                     return;

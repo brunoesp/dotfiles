@@ -25,6 +25,9 @@ public sealed class Library
 
     public List<MediaList> Lists { get; set; } = [];
 
+    /// <summary>Game consoles; seeded with the built-in list when empty.</summary>
+    public List<PlatformDef> Platforms { get; set; } = [];
+
     public LibrarySettings Settings { get; set; } = new();
 }
 

@@ -45,6 +45,12 @@ documentaries, audiobooks…
   Results appear as each source answers; a source that takes over 6 s is skipped.
 
   ![editor](docs/editor.png)
+- **Consoles** – games have a console field (with suggestions; typing an unknown console adds it).
+  Each console shows as a small badge in its own color (SNES purple, Genesis blue, NES red, PS5…).
+  Covers for retro games (NES, SNES, N64, Game Boy, Genesis, Atari 2600, PlayStation, Xbox…) come from
+  the [libretro-thumbnails](https://github.com/libretro-thumbnails) box-art collection for that console.
+
+  ![games](docs/games.png)
 - **View modes** – every list can be shown as *cards* (default), *tiles* or *compact* rows; the choice
   is remembered per list.
 

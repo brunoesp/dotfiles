@@ -206,6 +206,38 @@
             <Setter Property="Fill" Value="{DynamicResource SubtleText}" />
         </Style>
 
+        <!-- Console badges -->
+        <Style Selector="Border.platformBadge">
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="5,0" />
+            <Setter Property="Height" Value="17" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.platformBadge TextBlock">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.platformBadge.large">
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="7,0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="BorderBrush" Value="#CCFFFFFF" />
+            <Setter Property="BorderThickness" Value="1.5" />
+        </Style>
+        <Style Selector="Border.platformBadge.large TextBlock">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="AutoCompleteBox.bare">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="AutoCompleteBox.bare TextBox /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
         <!-- Edit mode toggle -->
         <Style Selector="Button.editToggle">
             <Setter Property="Background" Value="{DynamicResource CardBackground}" />
@@ -348,6 +380,8 @@
 
         <!-- Type count chips: the inner border carries the type color -->
         <Style Selector="Button.chip">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="CornerRadius" Value="16" />
             <Setter Property="Background" Value="Transparent" />

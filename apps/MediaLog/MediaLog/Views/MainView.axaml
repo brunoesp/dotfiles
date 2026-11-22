@@ -171,10 +171,10 @@
                 <ScrollViewer Grid.Row="1">
                     <StackPanel>
                         <!-- Per-type, color coded counters (click to filter) -->
-                        <ItemsControl ItemsSource="{Binding Stats}" Margin="20,8,16,0">
+                        <ItemsControl ItemsSource="{Binding Stats}" Margin="20,8,8,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel />
+                                    <c:BalancedWrapPanel />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
@@ -182,7 +182,7 @@
                                     <Button Classes="chip" Command="{Binding ToggleCommand}" ToolTip.Tip="Filter by type">
                                         <Border Classes="chip" Background="{Binding Type.SoftBrush}"
                                                 BorderBrush="{Binding BorderBrush}">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                                                 <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.Brush}" Width="16" Height="16" />
                                                 <TextBlock Text="{Binding Type.Label}" VerticalAlignment="Center" />
                                                 <TextBlock Text="{Binding Count}" FontWeight="Bold" VerticalAlignment="Center"
@@ -221,6 +221,11 @@
 
                                     <Border x:Name="MetaWide" Grid.Column="2">
                                         <StackPanel x:Name="Meta" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <Border Classes="sep" IsVisible="{Binding IsNewGame}" />
+                                            <AutoCompleteBox Classes="bare platform" Text="{Binding NewPlatform}" ItemsSource="{Binding PlatformNames}"
+                                                             FilterMode="Contains" MinimumPrefixLength="1" PlaceholderText="Console" Width="140"
+                                                             IsVisible="{Binding IsNewGame}"
+                                                             ToolTip.Tip="Console. Type a new one to add it" />
                                             <Border Classes="sep" />
                                             <CalendarDatePicker Classes="bare" SelectedDate="{Binding NewDate}" Width="132"
                                                                 SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy"
@@ -297,6 +302,9 @@
                                                 <TextBlock Text="{Binding Details}" FontSize="12" IsVisible="{Binding HasDetails}" TextWrapping="Wrap" />
                                                 <WrapPanel ItemSpacing="6">
                                                     <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
+                                                    <Border Classes="platformBadge" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}">
+                                                        <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                                                    </Border>
                                                     <TextBlock Classes="subtle" Text="·" FontSize="12" />
                                                     <TextBlock Classes="subtle" Text="{Binding DateText}" FontSize="12" />
                                                     <TextBlock Classes="subtle" Text="·" FontSize="12" IsVisible="{Binding ShowList}" />
@@ -334,6 +342,11 @@
                                                     <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
                                                                   Width="44" Height="44" StrokeThickness="1.8" />
                                                     <Image Source="{Binding Image}" Stretch="UniformToFill" IsVisible="{Binding HasImage}" />
+                                                    <!-- console badge -->
+                                                    <Border Classes="platformBadge large" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
+                                                        <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                                                    </Border>
                                                     <!-- type badge over the cover image -->
                                                     <Border Width="26" Height="26" CornerRadius="13" Margin="8" Background="{Binding Type.Brush}"
                                                             HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasImage}"
@@ -418,8 +431,12 @@
                                             </StackPanel>
                                             <TextBlock Grid.Column="2" Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold"
                                                        FontSize="11" VerticalAlignment="Center" Margin="8,0" Classes="compactType" />
-                                            <TextBlock Grid.Column="3" Classes="subtle" Text="{Binding DateText}" FontSize="12" VerticalAlignment="Center"
-                                                       MinWidth="78" TextAlignment="Right" />
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <Border Classes="platformBadge" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}">
+                                                    <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                                                </Border>
+                                                <TextBlock Classes="subtle" Text="{Binding DateText}" FontSize="12" MinWidth="78" TextAlignment="Right" />
+                                            </StackPanel>
                                             <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="4,0,6,0" IsVisible="{Binding ShowActions}">
                                                 <Button Classes="icon" Padding="6" Command="{Binding EditCommand}" ToolTip.Tip="Edit entry">
                                                     <c:StrokeIcon Data="{x:Static c:Icons.Pencil}" Width="15" Height="15" />
@@ -523,6 +540,9 @@
                                         <CalendarDatePicker SelectedDate="{Binding Date}" Width="150"
                                                             SelectedDateFormat="Custom" CustomDateFormatString="d MMM yyyy" ToolTip.Tip="Date completed" />
                                         <ComboBox ItemsSource="{Binding Lists}" SelectedItem="{Binding List}" MinWidth="130" ToolTip.Tip="List" />
+                                        <AutoCompleteBox Text="{Binding PlatformText}" ItemsSource="{Binding PlatformNames}" FilterMode="Contains"
+                                                         MinimumPrefixLength="1" PlaceholderText="Console" Width="170" IsVisible="{Binding IsGame}"
+                                                         ToolTip.Tip="Console. Type a new one to add it" />
                                     </WrapPanel>
                                     <Grid ColumnDefinitions="80,*,*" ColumnSpacing="8">
                                         <TextBox Text="{Binding YearText}" PlaceholderText="Year" ToolTip.Tip="Year" />
