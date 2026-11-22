@@ -344,41 +344,38 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <!-- Entries: tiles view -->
+                        <!-- Entries: tiles view (all tiles the same size; details are in the card) -->
                         <ItemsControl x:Name="TilesView" ItemsSource="{Binding Entries}" Margin="12,0,12,16" IsVisible="{Binding IsTilesMode}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <c:TileGrid Columns="{Binding TileColumns}" />
+                                    <UniformGrid Columns="{Binding TileColumns}" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:EntryViewModel">
                                     <Border Classes="card entry" Margin="4" ClipToBounds="True">
-                                        <Grid RowDefinitions="Auto,Auto,*">
-                                            <!-- cover: shaped like the image (uncropped) -->
-                                            <c:AspectBox Ratio="{Binding CoverRatio}">
-                                            <Border Background="{Binding CoverBackground}" ClipToBounds="True">
-                                                <Panel>
-                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
-                                                                  Width="44" Height="44" StrokeThickness="1.8" IsVisible="{Binding !HasImage}" />
-                                                    <!-- the cover box has the image's own shape; Uniform never crops -->
-                                                    <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
-                                                    <!-- console badge -->
-                                                    <Border Classes="platformBadge large" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}"
-                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
-                                                        <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
-                                                    </Border>
-                                                    <!-- type badge over the cover image -->
-                                                    <Border Width="26" Height="26" CornerRadius="13" Margin="8" Background="{Binding Type.Brush}"
-                                                            HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasImage}"
-                                                            BorderBrush="#CCFFFFFF" BorderThickness="1.5">
-                                                        <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="14" Height="14" StrokeThickness="2.4" />
-                                                    </Border>
-                                                </Panel>
-                                            </Border>
+                                        <Grid RowDefinitions="Auto,Auto,Auto">
+                                            <!-- cover box: same shape for every tile; the cover is fitted inside, uncropped -->
+                                            <c:AspectBox Ratio="1.3">
+                                                <Border Background="{Binding TileCoverBackground}" ClipToBounds="True">
+                                                    <Panel>
+                                                        <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
+                                                                      Width="44" Height="44" StrokeThickness="1.8" IsVisible="{Binding !HasImage}" />
+                                                        <Image Source="{Binding Image}" Stretch="Uniform" Margin="6" IsVisible="{Binding HasImage}" />
+                                                        <!-- console badge -->
+                                                        <Border Classes="platformBadge large" Background="{Binding Platform.Brush, FallbackValue={x:Null}}" IsVisible="{Binding HasPlatform}"
+                                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
+                                                            <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
+                                                        </Border>
+                                                        <!-- type badge over the cover image -->
+                                                        <Border Width="26" Height="26" CornerRadius="13" Margin="8" Background="{Binding Type.Brush}"
+                                                                HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasImage}"
+                                                                BorderBrush="#CCFFFFFF" BorderThickness="1.5">
+                                                            <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="14" Height="14" StrokeThickness="2.4" />
+                                                        </Border>
+                                                    </Panel>
+                                                </Border>
                                             </c:AspectBox>
-                                            <!-- type-colored line between cover and info -->
-                                            <Border Grid.Row="1" Height="3" Background="{Binding Type.Brush}" />
                                             <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
                                                     IsVisible="{Binding ShowActions}">
                                                 <StackPanel Orientation="Horizontal">
@@ -390,63 +387,22 @@
                                                     </Button>
                                                 </StackPanel>
                                             </Border>
-                                            <!-- square covers leave more room: roomier, line-per-detail layout -->
-                                            <DockPanel Grid.Row="2" Margin="12,10,12,12" IsVisible="{Binding IsSquareCover}">
-                                                <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,8,0,0">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
-                                                        <TextBlock Classes="subtle" FontSize="12" Text="·" />
-                                                        <TextBlock Classes="subtle" FontSize="12" Text="{Binding DateText}" />
-                                                    </StackPanel>
-                                                    <TextBlock Classes="subtle" FontSize="12" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                                <StackPanel Spacing="3">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"
-                                                               TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Creator}" FontSize="14" IsVisible="{Binding HasCreator}"
-                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding YearAndLength}" Classes="subtle" FontSize="12" IsVisible="{Binding HasYearAndLength}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <ItemsControl ItemsSource="{Binding Credits}" IsVisible="{Binding HasCredits}" Margin="0,4,0,0">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate DataType="m:Credit">
-                                                                <TextBlock FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Margin="0,1">
-                                                                    <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
-                                                                    <Run Text="{Binding Name}" />
-                                                                </TextBlock>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </StackPanel>
-                                            </DockPanel>
-                                            <DockPanel Grid.Row="2" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
-                                                <StackPanel DockPanel.Dock="Bottom" Spacing="1" Margin="0,6,0,0">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
-                                                        <TextBlock Classes="subtle" FontSize="11" Text="·" />
-                                                        <TextBlock Classes="subtle" FontSize="11" Text="{Binding DateText}" />
-                                                    </StackPanel>
-                                                    <TextBlock Classes="subtle" FontSize="11" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                                <StackPanel Spacing="2">
+                                            <!-- type-colored line between cover and info -->
+                                            <Border Grid.Row="1" Height="3" Background="{Binding Type.Brush}" />
+                                            <!-- fixed-height info: longer text ends in "…" (everything is in the card) -->
+                                            <Grid Grid.Row="2" Height="82" Margin="10,7,10,8" RowDefinitions="*,Auto">
+                                                <StackPanel Spacing="1">
                                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
-                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <ItemsControl ItemsSource="{Binding Credits}" IsVisible="{Binding HasCredits}" Margin="0,3,0,0">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate DataType="m:Credit">
-                                                                <TextBlock FontSize="11" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Margin="0,1">
-                                                                    <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
-                                                                    <Run Text="{Binding Name}" />
-                                                                </TextBlock>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                    <TextBlock Text="{Binding Details}" FontSize="11" Classes="subtle" IsVisible="{Binding HasDetails}"
+                                                               TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
-                                            </DockPanel>
+                                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5">
+                                                    <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
+                                                    <TextBlock Classes="subtle" FontSize="11" Text="·" />
+                                                    <TextBlock Classes="subtle" FontSize="11" Text="{Binding DateText}" />
+                                                </StackPanel>
+                                            </Grid>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

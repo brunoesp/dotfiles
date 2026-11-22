@@ -94,6 +94,9 @@ public partial class EntryViewModel : ViewModelBase
 
     public double ThumbWidth => Math.Clamp(ThumbHeight / CoverRatio, 26, 72);
 
+    /// <summary>Tile cover box: a soft tint behind fitted covers, the type color without one.</summary>
+    public IBrush TileCoverBackground => HasImage ? Type.SoftBrush : Type.Brush;
+
     /// <summary>The type-colored placeholder only shows when there's no cover image.</summary>
     public IBrush CoverBackground => HasImage ? Brushes.Transparent : Type.Brush;
 
@@ -153,7 +156,7 @@ public partial class EntryViewModel : ViewModelBase
 
     /// <summary>Cover image, once downloaded (or from cache).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground), nameof(ThumbWidth))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground), nameof(TileCoverBackground), nameof(ThumbWidth))]
     public partial Bitmap? Image { get; set; }
 
     public bool HasImage => Image is not null;

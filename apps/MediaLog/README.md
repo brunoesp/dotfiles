@@ -40,9 +40,8 @@ documentaries, audiobooks…
 - **Editing** – the **Edit** button at the top shows edit / delete buttons on every entry (hidden
   otherwise); the pencil opens an editor for title, type, date and list (moving it
   between lists), plus a **cover image**: *Find images* searches online by title and shows a grid of
-  suggestions to pick from (or paste any image link). Covers show in tiles mode — uncropped, each tile taking the image's own shape (wide SNES / N64
-  boxes, tall posters, square album art; square-ish covers get a roomier info layout) — and as the
-  entry badge,
+  suggestions to pick from (or paste any image link). Covers show in tiles mode — all tiles the same size, the cover fitted whole (uncropped) in the
+  tile, the info trimmed with "…" (everything is in the details card) — and as the entry thumbnail,
   and are cached on disk so they work offline.
   Image sources (free, no API keys), chosen by type: Wikipedia, TVmaze (series), Open Library (books),
   iTunes (albums, podcasts, audiobooks, ebooks, movies), AniList and Jikan/MyAnimeList (anime, manga).
@@ -60,7 +59,7 @@ documentaries, audiobooks…
   of the typed words they contain.
 
   ![games](docs/games.png)
-- **Details card** – press and hold any entry (touch, mouse or pen) to see everything fetched for it:
+- **Details card** – tap any entry (touch, mouse or pen) to see everything fetched for it:
   the whole cover, type and console, year, creator, length, all credits, list and completion date.
   Tap / click outside the card to close it.
 
