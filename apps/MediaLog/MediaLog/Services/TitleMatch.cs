@@ -75,19 +75,16 @@ public static class TitleMatch
     }
 
     /// <summary>
-    /// Full-text search text for the Wikimedia search engine: the meaningful words as typed
-    /// (small words like "a", "to", "the" left out, since a word that's still being typed can
-    /// make the search engine require them), the last one as a prefix ("link pa*").
+    /// Full-text search text for the Wikimedia search engine. Whole words only: wildcards don't
+    /// combine reliably with the type filter there. A short last word is probably still being
+    /// typed, so it's left out ("a link to the pa" → "a link to the"); the label search that runs
+    /// alongside handles prefixes, and <see cref="Score"/> ranks the results.
     /// </summary>
     public static string FullTextQuery(string query)
     {
         var words = Words(query).ToList();
-        if (words.Count == 0)
-            return query;
-        var last = words[^1];
-        var main = words.Take(words.Count - 1).Where(w => !Minor.Contains(w)).ToList();
-        // Prefix-match the last word only when it's long enough to narrow things down.
-        main.Add(last.Length >= 3 && !Minor.Contains(last) ? last + "*" : last);
-        return string.Join(' ', main.Where(w => !Minor.Contains(w.TrimEnd('*')) || main.Count == 1));
+        if (words.Count > 1 && words[^1].Length < 4)
+            words.RemoveAt(words.Count - 1);
+        return words.Count == 0 ? query : string.Join(' ', words);
     }
 }
