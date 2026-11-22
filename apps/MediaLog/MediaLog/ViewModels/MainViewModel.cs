@@ -48,6 +48,7 @@ public partial class MainViewModel : ViewModelBase
         NewType = Types[0];
         NewDate = DateTime.Today;
         NewCover = CreateNewCover();
+        NewSuggestions = new TitleSuggestionsViewModel(() => NewType, ApplyNewSuggestion);
         SyncYearLists();
         SelectedNav = CurrentYearList;
         StartNewType();
@@ -313,6 +314,63 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial MediaTypeInfo? NewType { get; set; }
 
+    // --- Title lookup while typing ---------------------------------------------------
+
+    /// <summary>Online matches for the title being typed.</summary>
+    public TitleSuggestionsViewModel NewSuggestions { get; private set; } = null!;
+
+    /// <summary>Details (year, creator, length) of the picked match, saved with the new entry.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNewDetails), nameof(NewDetailsText))]
+    public partial MediaSuggestion? NewDetails { get; set; }
+
+    public bool HasNewDetails => NewDetails is not null;
+    public string NewDetailsText => NewDetails?.Details is { Length: > 0 } d ? d : "Matched online";
+
+    private bool _applyingSuggestion;
+
+    partial void OnNewNameChanged(string value)
+    {
+        if (_applyingSuggestion || NewSuggestions is null)
+            return;
+        // Editing the title after picking a match drops the match's details.
+        if (NewDetails is not null && value.Trim() != NewDetails.Title)
+            NewDetails = null;
+        NewSuggestions.Update(value);
+    }
+
+    partial void OnNewTypeChanged(MediaTypeInfo? value)
+    {
+        // Different type, different databases: look the title up again.
+        if (NewSuggestions is { IsOpen: true })
+            NewSuggestions.SearchNow(NewName);
+    }
+
+    private void ApplyNewSuggestion(MediaSuggestion suggestion, Avalonia.Media.Imaging.Bitmap? thumbnail)
+    {
+        _applyingSuggestion = true;
+        NewName = suggestion.Title;
+        _applyingSuggestion = false;
+        NewDetails = suggestion;
+        if (suggestion.ImageUrl is { } url)
+        {
+            NewCover.ImageUrl = url;
+            NewCover.Image = thumbnail;
+            if (thumbnail is null)
+                _ = LoadNewCoverAsync(url);
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadNewCoverAsync(string url)
+    {
+        var bitmap = await ImageCache.GetAsync(url);
+        if (NewCover.ImageUrl == url)
+            NewCover.Image = bitmap;
+    }
+
+    [RelayCommand]
+    private void ClearNewDetails() => NewDetails = null;
+
     /// <summary>Cover chosen from the add bar for the next new entry.</summary>
     [ObservableProperty]
     public partial CoverPickerViewModel NewCover { get; set; } = null!;
@@ -375,10 +433,17 @@ public partial class MainViewModel : ViewModelBase
             target = EnsureYearList(date.Year);
 
         var imageUrl = NewCover.ImageUrl;
-        target.Model!.Entries.Add(new MediaEntry { Name = NewName.Trim(), Kind = type.Id, CompletedOn = date, ImageUrl = imageUrl });
+        var details = NewDetails;
+        target.Model!.Entries.Add(new MediaEntry
+        {
+            Name = NewName.Trim(), Kind = type.Id, CompletedOn = date, ImageUrl = imageUrl,
+            Year = details?.Year, Creator = details?.Creator, Length = details?.Length,
+        });
         if (imageUrl is not null)
             _ = ImageCache.SaveToDiskAsync(imageUrl);
         NewName = "";
+        NewDetails = null;
+        NewSuggestions.Dismiss();
         NewCover.CancelSearch();
         NewCover = CreateNewCover();
         _newCoverQuery = "";
@@ -451,6 +516,9 @@ public partial class MainViewModel : ViewModelBase
         entry.Kind = editor.Type.Id;
         entry.CompletedOn = date;
         entry.ImageUrl = editor.Cover.ImageUrl;
+        entry.Year = int.TryParse(editor.YearText?.Trim(), out var year) ? year : null;
+        entry.Creator = string.IsNullOrWhiteSpace(editor.Creator) ? null : editor.Creator.Trim();
+        entry.Length = string.IsNullOrWhiteSpace(editor.Length) ? null : editor.Length.Trim();
         if (entry.ImageUrl is { } url)
             _ = ImageCache.SaveToDiskAsync(url);
 

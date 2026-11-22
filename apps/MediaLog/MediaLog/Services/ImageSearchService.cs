@@ -26,7 +26,6 @@ public static class ImageSearchService
     /// <summary>A slow source must not hold up the others.</summary>
     private static readonly TimeSpan SourceTimeout = TimeSpan.FromSeconds(6);
 
-    private enum Category { Film, Series, Anime, Book, Manga, Comic, Game, Music, Podcast, Audiobook, General }
 
     /// <summary>
     /// Queries all suitable sources in parallel and yields each source's results as soon as it
@@ -39,7 +38,7 @@ public static class ImageSearchService
         if (query.Length == 0)
             yield break;
 
-        var tasks = SourcesFor(CategoryOf(type)).Select(source => SafeAsync(source, query, ct)).ToList();
+        var tasks = SourcesFor(MediaCategories.Of(type)).Select(source => SafeAsync(source, query, ct)).ToList();
         var seen = new HashSet<string>();
         var total = 0;
         await foreach (var task in Task.WhenEach(tasks).WithCancellation(ct).ConfigureAwait(false))
@@ -56,52 +55,20 @@ public static class ImageSearchService
         }
     }
 
-    private static Category CategoryOf(MediaTypeInfo? type)
-    {
-        if (type is null)
-            return Category.General;
-        var label = type.Label.ToLowerInvariant();
-        if (label.Contains("manga")) return Category.Manga;
-        if (label.Contains("anime")) return Category.Anime;
-        return type.Id switch
-        {
-            "Movie" or "Documentary" => Category.Film,
-            "Series" => Category.Series,
-            "Book" or "TechBook" => Category.Book,
-            "Comic" => Category.Comic,
-            "Game" => Category.Game,
-            "Music" => Category.Music,
-            "Podcast" => Category.Podcast,
-            "Audiobook" => Category.Audiobook,
-            _ => type.Def.Icon switch
-            {
-                "film" or "clapper" or "video" or "ticket" => Category.Film,
-                "tv" => Category.Series,
-                "book" or "techbook" or "article" or "course" => Category.Book,
-                "chat" => Category.Comic,
-                "gamepad" or "dice" => Category.Game,
-                "music" => Category.Music,
-                "mic" => Category.Podcast,
-                "headphones" => Category.Audiobook,
-                _ => Category.General,
-            },
-        };
-    }
-
     private delegate Task<List<ImageResult>> Source(string query, CancellationToken ct);
 
-    private static Source[] SourcesFor(Category category) => category switch
+    private static Source[] SourcesFor(MediaCategory category) => category switch
     {
-        Category.Film => [ITunes("movie", "movie"), Wikipedia, TvMaze],
-        Category.Series => [TvMaze, Wikipedia],
-        Category.Anime => [AniList("ANIME"), Jikan("anime"), TvMaze, Wikipedia],
-        Category.Book => [OpenLibrary, ITunes("ebook", "ebook"), Wikipedia],
-        Category.Manga => [AniList("MANGA"), Jikan("manga"), OpenLibrary, Wikipedia],
-        Category.Comic => [OpenLibrary, Wikipedia],
-        Category.Game => [Wikipedia, WikipediaWith("video game")],
-        Category.Music => [ITunes("music", "album"), Wikipedia],
-        Category.Podcast => [ITunes("podcast", "podcast"), Wikipedia],
-        Category.Audiobook => [ITunes("audiobook", "audiobook"), OpenLibrary, Wikipedia],
+        MediaCategory.Film => [ITunes("movie", "movie"), Wikipedia, TvMaze],
+        MediaCategory.Series => [TvMaze, Wikipedia],
+        MediaCategory.Anime => [AniList("ANIME"), Jikan("anime"), TvMaze, Wikipedia],
+        MediaCategory.Book => [OpenLibrary, ITunes("ebook", "ebook"), Wikipedia],
+        MediaCategory.Manga => [AniList("MANGA"), Jikan("manga"), OpenLibrary, Wikipedia],
+        MediaCategory.Comic => [OpenLibrary, Wikipedia],
+        MediaCategory.Game => [Wikipedia, WikipediaWith("video game")],
+        MediaCategory.Music => [ITunes("music", "album"), Wikipedia],
+        MediaCategory.Podcast => [ITunes("podcast", "podcast"), Wikipedia],
+        MediaCategory.Audiobook => [ITunes("audiobook", "audiobook"), OpenLibrary, Wikipedia],
         _ => [Wikipedia, OpenLibrary, TvMaze, ITunes("all", "")],
     };
 

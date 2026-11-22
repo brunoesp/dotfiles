@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -37,6 +38,13 @@ public partial class EntryViewModel : ViewModelBase
     public bool ShowList { get; }
 
     public string Name => Model.Name;
+
+    /// <summary>"2024 · Denis Villeneuve · 2h 46m" (empty when unknown).</summary>
+    public string Details => string.Join(" · ",
+        new[] { Model.Year?.ToString(CultureInfo.InvariantCulture), Model.Creator, Model.Length }
+            .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    public bool HasDetails => Details.Length > 0;
 
     public string DateText => Model.CompletedOn.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
 

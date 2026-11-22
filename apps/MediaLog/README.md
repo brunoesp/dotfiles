@@ -17,6 +17,15 @@ documentaries, audiobooks…
 - **Custom lists** – create as many extra lists as you like (e.g. "Favourites"); rename by clicking the title, delete from the header.
 - **Entries** – added from a one-line bar: type · title · date · cover · big **+** button (or press Enter).
   The cover button searches images for the title being typed so the entry is added with its cover.
+- **Title lookup** – while you type a title, matching works are suggested from online databases with
+  their proper name, cover and details: **year**, **creator** (director, author, studio, developer,
+  artist…) and **length** (running time, episodes, pages, tracks…). Picking one fills it all in; the
+  details are shown on the entry and editable in the editor (which also has a *Look up* button).
+  Sources (free, no keys) by type: Wikidata (movies, documentaries, games, other), TVmaze (series),
+  AniList (anime, manga), Google Books / Open Library / iTunes (books, comics), iTunes (albums,
+  podcasts, audiobooks).
+
+  ![suggestions](docs/suggest.png)
   Each type has its own vivid **color** and **icon**.
 - **Media types** – 13 built-in types (incl. *Tech Book* and *Anime Movie*); create your own or edit any
   type's name, color and icon from **Media types** in the sidebar. Types that are in use can't be deleted.

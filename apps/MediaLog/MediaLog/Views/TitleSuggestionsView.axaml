@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaLog.ViewModels"
+             xmlns:c="using:MediaLog.Controls"
+             x:Class="MediaLog.Views.TitleSuggestionsView"
+             x:DataType="vm:TitleSuggestionsViewModel"
+             IsVisible="{Binding IsOpen}">
+    <!-- Matching works found online for the typed title -->
+    <Border Classes="suggestions">
+        <StackPanel>
+            <Grid ColumnDefinitions="*,Auto" Margin="12,6,4,2">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="Suggestions" Classes="subtle" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <ProgressBar IsIndeterminate="True" Width="60" MinWidth="60" IsVisible="{Binding IsLoading}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="icon" Padding="5" Command="{Binding DismissCommand}" ToolTip.Tip="Hide suggestions (Esc)">
+                    <c:StrokeIcon Data="{x:Static c:Icons.Close}" Width="14" Height="14" />
+                </Button>
+            </Grid>
+            <TextBlock Text="No matches found online. You can still add it as typed." Classes="subtle" FontSize="12"
+                       Margin="12,2,12,10" IsVisible="{Binding IsEmpty}" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding Items}" Margin="4,0,4,4">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:SuggestionViewModel">
+                        <Button Classes="suggestion" Command="{Binding PickCommand}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <Border Width="32" Height="48" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource CardBorder}">
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Details}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                               IsVisible="{Binding HasDetails}" />
+                                    <TextBlock Text="{Binding Source}" Classes="subtle" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</UserControl>

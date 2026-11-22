@@ -244,6 +244,33 @@
             <Setter Property="Background" Value="#33FFFFFF" />
         </Style>
 
+        <!-- Title suggestions -->
+        <Style Selector="Border.suggestions">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="BoxShadow" Value="0 8 24 0 #22000000" />
+        </Style>
+        <Style Selector="Button.suggestion">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+        <Style Selector="Button.suggestion:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelected}" />
+        </Style>
+        <Style Selector="Border.detailsChip">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="10,3,4,3" />
+        </Style>
+
         <!-- Image suggestions -->
         <Style Selector="ListBox.imageResults">
             <Setter Property="Background" Value="Transparent" />

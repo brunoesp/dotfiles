@@ -27,7 +27,11 @@ public partial class EntryEditorViewModel : ViewModelBase
         Type = entry.Type;
         Date = entry.Model.CompletedOn.ToDateTime(TimeOnly.MinValue);
         List = entry.List;
+        YearText = entry.Model.Year?.ToString() ?? "";
+        Creator = entry.Model.Creator ?? "";
+        Length = entry.Model.Length ?? "";
         Cover = new CoverPickerViewModel(entry.Model.ImageUrl, entry.Image, entry.Model.Name, () => Type);
+        Suggestions = new TitleSuggestionsViewModel(() => Type, ApplySuggestion);
         // No cover yet: start suggesting right away.
         if (!Cover.HasImage)
             Cover.SearchIfIdle();
@@ -37,6 +41,40 @@ public partial class EntryEditorViewModel : ViewModelBase
     public IReadOnlyList<MediaTypeInfo> Types { get; }
     public IReadOnlyList<ListViewModel> Lists { get; }
     public CoverPickerViewModel Cover { get; }
+
+    /// <summary>Online matches for the title ("Look up").</summary>
+    public TitleSuggestionsViewModel Suggestions { get; }
+
+    [ObservableProperty]
+    public partial string YearText { get; set; }
+
+    /// <summary>Director, author, developer, artist, studio…</summary>
+    [ObservableProperty]
+    public partial string Creator { get; set; }
+
+    /// <summary>Running time, pages, episodes…</summary>
+    [ObservableProperty]
+    public partial string Length { get; set; }
+
+    [RelayCommand]
+    private void LookUp() => Suggestions.SearchNow(Name);
+
+    private void ApplySuggestion(Services.MediaSuggestion suggestion, Avalonia.Media.Imaging.Bitmap? thumbnail)
+    {
+        Name = suggestion.Title;
+        if (suggestion.Year is { } year)
+            YearText = year.ToString();
+        if (suggestion.Creator is { } creator)
+            Creator = creator;
+        if (suggestion.Length is { } length)
+            Length = length;
+        if (suggestion.ImageUrl is { } url)
+        {
+            Cover.SelectedResult = null;
+            Cover.ImageUrl = url;
+            Cover.Image = thumbnail;
+        }
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -64,6 +102,7 @@ public partial class EntryEditorViewModel : ViewModelBase
     private void Save()
     {
         Cover.CancelSearch();
+        Suggestions.Dismiss();
         _save(this);
     }
 

@@ -11,6 +11,15 @@ public sealed class MediaEntry
     public string Kind { get; set; } = "Other";
     public DateOnly CompletedOn { get; set; }
 
+    /// <summary>Release / publication year.</summary>
+    public int? Year { get; set; }
+
+    /// <summary>Director, author, developer, artist, studio… depending on the type.</summary>
+    public string? Creator { get; set; }
+
+    /// <summary>Running time, page count, number of episodes… as display text.</summary>
+    public string? Length { get; set; }
+
     /// <summary>Optional cover / poster image chosen by the user.</summary>
     public string? ImageUrl { get; set; }
 }
