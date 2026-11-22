@@ -102,8 +102,13 @@ public partial class EntryEditorViewModel : ViewModelBase
 
     private void ApplyDetails(Services.MediaSuggestion suggestion, Avalonia.Media.Imaging.Bitmap? thumbnail, bool onlyMissing = false)
     {
-        if (suggestion.Credits is { Count: > 0 } credits && (!onlyMissing || string.IsNullOrWhiteSpace(CreditsText)))
-            CreditsText = FormatCredits(credits);
+        if (suggestion.Credits is { Count: > 0 } credits)
+        {
+            // Picked match: its credits; later details: only roles that are still missing.
+            CreditsText = onlyMissing
+                ? FormatCredits(Services.MetadataService.MergeCredits(ParseCredits(CreditsText), credits))
+                : FormatCredits(credits);
+        }
         if (onlyMissing)
         {
             if (string.IsNullOrWhiteSpace(YearText) && suggestion.Year is { } y)

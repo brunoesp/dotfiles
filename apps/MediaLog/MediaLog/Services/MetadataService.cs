@@ -18,7 +18,7 @@ namespace MediaLog.Services;
 /// <param name="Length">Running time, pages, episodes, tracks… as display text.</param>
 public sealed record MediaSuggestion(
     string Title, int? Year, string? Creator, string? Length, string? ImageUrl, string Source, string? Description = null,
-    string? Platform = null, IReadOnlyList<Credit>? Credits = null)
+    string? Platform = null, IReadOnlyList<Credit>? Credits = null, string? WikipediaTitle = null)
 {
     /// <summary>"2024 · Denis Villeneuve · 2h 46m"</summary>
     public string Details => string.Join(" · ",
@@ -77,34 +77,70 @@ public static class MetadataService
     public static async Task<MediaSuggestion> EnrichAsync(MediaSuggestion suggestion, MediaTypeInfo? type, CancellationToken ct)
     {
         var category = MediaCategories.Of(type);
-        if (category is not (MediaCategory.Game or MediaCategory.Film)
-            || (suggestion.Year is not null && suggestion.Creator is not null && suggestion.Credits is { Count: > 0 }))
+        if (category is not (MediaCategory.Game or MediaCategory.Film))
             return suggestion;
         try
         {
-            var kind = category == MediaCategory.Game ? WikidataKind.Game : WikidataKind.Film;
-            var match = (await SafeAsync(Wikidata(kind), suggestion.Title, ct).ConfigureAwait(false))
-                .Select(m => (Match: m, Score: TitleMatch.Score(m.Title, suggestion.Title) + TitleMatch.Score(suggestion.Title, m.Title)))
-                .Where(m => m.Score >= 1.7)
-                .OrderByDescending(m => m.Score)
-                .Select(m => m.Match)
-                .FirstOrDefault();
-            if (match is null)
-                return suggestion;
-            return suggestion with
+            // 1. Wikidata match for anything missing (and the Wikipedia article to read credits from).
+            if (suggestion.WikipediaTitle is null
+                || suggestion.Year is null || suggestion.Creator is null || suggestion.Credits is not { Count: > 0 })
             {
-                Year = suggestion.Year ?? match.Year,
-                Creator = suggestion.Creator ?? match.Creator,
-                Length = suggestion.Length ?? match.Length,
-                Credits = suggestion.Credits is { Count: > 0 } ? suggestion.Credits : match.Credits,
-                Platform = suggestion.Platform ?? match.Platform,
-                ImageUrl = suggestion.ImageUrl ?? match.ImageUrl,
-            };
+                var kind = category == MediaCategory.Game ? WikidataKind.Game : WikidataKind.Film;
+                var match = (await SafeAsync(Wikidata(kind), suggestion.Title, ct).ConfigureAwait(false))
+                    .Select(m => (Match: m, Score: TitleMatch.Score(m.Title, suggestion.Title) + TitleMatch.Score(suggestion.Title, m.Title)))
+                    .Where(m => m.Score >= 1.7)
+                    .OrderByDescending(m => m.Score)
+                    .Select(m => m.Match)
+                    .FirstOrDefault();
+                if (match is not null)
+                {
+                    suggestion = suggestion with
+                    {
+                        Year = suggestion.Year ?? match.Year,
+                        Creator = suggestion.Creator ?? match.Creator,
+                        Length = suggestion.Length ?? match.Length,
+                        Credits = MergeCredits(suggestion.Credits, match.Credits),
+                        Platform = suggestion.Platform ?? match.Platform,
+                        ImageUrl = suggestion.ImageUrl ?? match.ImageUrl,
+                        WikipediaTitle = suggestion.WikipediaTitle ?? match.WikipediaTitle,
+                    };
+                }
+            }
+
+            // 2. The Wikipedia infobox usually lists more people (composer, programmer…).
+            if (suggestion.WikipediaTitle is { } article)
+            {
+                try
+                {
+                    var infobox = await WikipediaInfobox.CreditsAsync(article, ct).ConfigureAwait(false);
+                    suggestion = suggestion with { Credits = MergeCredits(suggestion.Credits, infobox) };
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Infobox credits are a bonus.
+                }
+            }
+            return suggestion;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             return suggestion;
         }
+    }
+
+    /// <summary>
+    /// Combines credits: roles already present are kept as they are, missing roles are added;
+    /// the result is in the usual role order (director, producer, …, composer, …, genre).
+    /// </summary>
+    public static IReadOnlyList<Credit>? MergeCredits(IEnumerable<Credit>? existing, IEnumerable<Credit>? extra)
+    {
+        var merged = (existing ?? []).ToList();
+        foreach (var credit in extra ?? [])
+        {
+            if (!merged.Any(c => c.Role.Equals(credit.Role, StringComparison.OrdinalIgnoreCase)))
+                merged.Add(credit);
+        }
+        return merged.Count == 0 ? null : merged.OrderBy(c => WikipediaInfobox.RoleOrder(c.Role)).ToList();
     }
 
     /// <summary>Video games matching the title (Wikidata), with their original platform and box art.</summary>
@@ -316,7 +352,8 @@ public static class MetadataService
                         Name = string.Join(", ", c.Ids.Select(id => names.GetValueOrDefault(id)).OfType<string>()),
                     })
                     .Where(c => c.Name.Length > 0)
-                    .ToList()))
+                    .ToList(),
+                i.Article))
             .ToList();
     };
 

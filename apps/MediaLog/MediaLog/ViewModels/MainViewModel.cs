@@ -669,8 +669,10 @@ public partial class MainViewModel : ViewModelBase
         var category = Services.MediaCategories.Of(type);
         var wantsCredits = category is Services.MediaCategory.Game or Services.MediaCategory.Film;
         var wantsPlatform = category == Services.MediaCategory.Game;
+        const int currentInfoVersion = 2;
         if (entry.Year is not null && entry.Creator is not null && entry.ImageUrl is not null
-            && (!wantsCredits || entry.Credits is { Count: > 0 }) && (!wantsPlatform || entry.Platform is not null))
+            && (!wantsCredits || (entry.Credits is { Count: > 0 } && entry.InfoVersion >= currentInfoVersion))
+            && (!wantsPlatform || entry.Platform is not null))
             return false; // nothing missing
 
         var candidates = new List<MediaSuggestion>();
@@ -697,7 +699,18 @@ public partial class MainViewModel : ViewModelBase
         if (entry.Year is null && best.Year is { } year) { entry.Year = year; changed = true; }
         if (entry.Creator is null && best.Creator is { } creator) { entry.Creator = creator; changed = true; }
         if (entry.Length is null && best.Length is { } length) { entry.Length = length; changed = true; }
-        if (entry.Credits is not { Count: > 0 } && best.Credits is { Count: > 0 } credits) { entry.Credits = credits.ToList(); changed = true; }
+        // Credits: keep every role already there, add the missing ones (composer, programmer…).
+        var mergedCredits = MetadataService.MergeCredits(entry.Credits, best.Credits);
+        if ((mergedCredits?.Count ?? 0) > (entry.Credits?.Count ?? 0))
+        {
+            entry.Credits = mergedCredits!.ToList();
+            changed = true;
+        }
+        if (wantsCredits && entry.InfoVersion != currentInfoVersion)
+        {
+            entry.InfoVersion = currentInfoVersion;
+            changed = true;
+        }
         if (wantsPlatform && entry.Platform is null && best.Platform is { } platform)
         {
             entry.Platform = EnsurePlatform(platform);

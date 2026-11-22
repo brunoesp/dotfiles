@@ -297,13 +297,19 @@
                                         <Grid ColumnDefinitions="4,Auto,*,Auto">
                                             <!-- color stripe -->
                                             <Border Background="{Binding Type.Brush}" />
-                                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="17" Margin="10,7"
-                                                    Background="{Binding Type.Brush}" ClipToBounds="True">
+                                            <!-- thumbnail: shaped like the cover (uncropped), like tiles; placeholder only without one -->
+                                            <!-- fixed-width slot so titles line up whatever the cover's shape -->
+                                            <Panel Grid.Column="1" Width="72" Margin="6,8,8,8">
+                                            <Border Width="{Binding ThumbWidth}" Height="46" CornerRadius="5"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Background="{Binding CoverBackground}" ClipToBounds="True">
                                                 <Panel>
-                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18" StrokeThickness="2.2" />
-                                                    <Image Source="{Binding Image}" Stretch="UniformToFill" IsVisible="{Binding HasImage}" />
+                                                    <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}" Width="18" Height="18"
+                                                                  StrokeThickness="2.2" IsVisible="{Binding !HasImage}" />
+                                                    <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
                                                 </Panel>
                                             </Border>
+                                            </Panel>
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1" Margin="0,6">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
                                                 <WrapPanel ItemSpacing="6" IsVisible="{Binding HasDetailsOrPlatform}">

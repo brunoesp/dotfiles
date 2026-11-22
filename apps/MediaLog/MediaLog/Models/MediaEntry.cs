@@ -21,6 +21,12 @@ public sealed class MediaEntry
     /// <summary>Running time, page count, number of episodes… as display text.</summary>
     public string? Length { get; set; }
 
+    /// <summary>
+    /// Version of the online lookup last applied by "Refresh all info" (2 = with Wikipedia infobox
+    /// credits); lets a refresh revisit entries looked up with an older, less complete version.
+    /// </summary>
+    public int? InfoVersion { get; set; }
+
     /// <summary>Extra credits: director, composer, publisher, genre… (optional).</summary>
     public List<Credit>? Credits { get; set; }
 

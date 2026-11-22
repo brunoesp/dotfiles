@@ -52,6 +52,11 @@ public partial class EntryViewModel : ViewModelBase
     /// <summary>"Director: Hiroshi Yamauchi · Composer: Koji Kondo" for cards.</summary>
     public string CreditsLine => string.Join("  ·  ", Credits.Select(c => $"{c.Role}: {c.Name}"));
 
+    /// <summary>Card thumbnail size: same shape rules as tiles, 46 px tall.</summary>
+    public const double ThumbHeight = 46;
+
+    public double ThumbWidth => Math.Clamp(ThumbHeight / CoverRatio, 26, 72);
+
     /// <summary>The type-colored placeholder only shows when there's no cover image.</summary>
     public IBrush CoverBackground => HasImage ? Brushes.Transparent : Type.Brush;
 
@@ -111,7 +116,7 @@ public partial class EntryViewModel : ViewModelBase
 
     /// <summary>Cover image, once downloaded (or from cache).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground), nameof(ThumbWidth))]
     public partial Bitmap? Image { get; set; }
 
     public bool HasImage => Image is not null;
