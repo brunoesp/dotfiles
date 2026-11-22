@@ -32,6 +32,11 @@
     <Application.Styles>
         <FluentTheme />
 
+        <!-- Calmer touch scrolling everywhere: dead zone, momentum only after a real flick -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="c:TouchScroll.IsEnabled" Value="True" />
+        </Style>
+
         <Style Selector="Border.card">
             <Setter Property="Background" Value="{DynamicResource CardBackground}" />
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
