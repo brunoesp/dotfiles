@@ -46,6 +46,21 @@ public partial class EntryViewModel : ViewModelBase
 
     public bool HasDetails => Details.Length > 0;
 
+    public string? Creator => Model.Creator;
+    public bool HasCreator => !string.IsNullOrWhiteSpace(Model.Creator);
+
+    /// <summary>"2013 · 14 tracks"</summary>
+    public string YearAndLength => string.Join(" · ",
+        new[] { Model.Year?.ToString(CultureInfo.InvariantCulture), Model.Length }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    public bool HasYearAndLength => YearAndLength.Length > 0;
+
+    /// <summary>Albums and podcasts have square artwork; everything else uses 2:3 posters / covers.</summary>
+    public bool IsSquareCover => MediaCategories.Of(Type) is MediaCategory.Music or MediaCategory.Podcast;
+
+    /// <summary>Cover height ÷ width for tiles.</summary>
+    public double CoverRatio => IsSquareCover ? 1.0 : 1.5;
+
     public string DateText => Model.CompletedOn.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
 
     /// <summary>Cover image, once downloaded (or from cache).</summary>

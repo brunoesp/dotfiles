@@ -313,15 +313,15 @@
                         <ItemsControl x:Name="TilesView" ItemsSource="{Binding Entries}" Margin="12,0,12,16" IsVisible="{Binding IsTilesMode}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <UniformGrid Columns="{Binding TileColumns}" />
+                                    <c:TileGrid Columns="{Binding TileColumns}" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:EntryViewModel">
                                     <Border Classes="card" Margin="4" ClipToBounds="True">
-                                        <Grid RowDefinitions="Auto,Auto">
-                                            <!-- 2:3 cover -->
-                                            <c:AspectBox Ratio="1.5">
+                                        <Grid RowDefinitions="Auto,*">
+                                            <!-- cover: 2:3 posters / book covers, 1:1 for albums and podcasts -->
+                                            <c:AspectBox Ratio="{Binding CoverRatio}">
                                             <Border Background="{Binding Type.Brush}" ClipToBounds="True">
                                                 <Panel>
                                                     <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
@@ -346,7 +346,27 @@
                                                     </Button>
                                                 </StackPanel>
                                             </Border>
-                                            <StackPanel Grid.Row="1" Margin="10,8,10,10" Spacing="2">
+                                            <!-- square covers leave more room: roomier, line-per-detail layout -->
+                                            <DockPanel Grid.Row="1" Margin="12,10,12,12" IsVisible="{Binding IsSquareCover}">
+                                                <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,8,0,0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Classes="subtle" FontSize="12" Text="·" />
+                                                        <TextBlock Classes="subtle" FontSize="12" Text="{Binding DateText}" />
+                                                    </StackPanel>
+                                                    <TextBlock Classes="subtle" FontSize="12" Text="{Binding List.Name}" IsVisible="{Binding ShowList}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <StackPanel Spacing="3">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"
+                                                               TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Creator}" FontSize="14" IsVisible="{Binding HasCreator}"
+                                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding YearAndLength}" Classes="subtle" FontSize="12" IsVisible="{Binding HasYearAndLength}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <StackPanel Grid.Row="1" Margin="10,8,10,10" Spacing="2" IsVisible="{Binding !IsSquareCover}">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
                                                            TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
