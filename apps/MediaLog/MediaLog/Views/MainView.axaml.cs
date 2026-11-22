@@ -21,6 +21,12 @@ public partial class MainView : UserControl
         AddHandler(PointerMovedEvent, OnEntryMoved, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, (_, _) => CancelHold(), handledEventsToo: true);
         AddHandler(PointerCaptureLostEvent, (_, _) => CancelHold(), handledEventsToo: true);
+        DetailsBackdrop.PointerPressed += (_, e) =>
+        {
+            if (DataContext is MainViewModel vm)
+                vm.CloseDetailsCommand.Execute(null);
+            e.Handled = true;
+        };
         Nav.SelectionChanged += (_, _) =>
         {
             if (_compact == true && DataContext is MainViewModel vm)

@@ -62,6 +62,7 @@ documentaries, audiobooks…
   ![games](docs/games.png)
 - **Details card** – press and hold any entry (touch, mouse or pen) to see everything fetched for it:
   the whole cover, type and console, year, creator, length, all credits, list and completion date.
+  Tap / click outside the card to close it.
 
   ![details](docs/details.png)
 - **Refresh all info** (sidebar) – looks every entry up online again and fills in what's missing
