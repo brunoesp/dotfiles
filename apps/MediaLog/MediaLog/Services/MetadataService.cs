@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaLog.Models;
@@ -147,6 +148,9 @@ public static class MetadataService
         return merged.Count == 0 ? null : merged.OrderBy(c => WikipediaInfobox.RoleOrder(c.Role)).ToList();
     }
 
+    /// <summary>Games on Steam matching the title (cover art, developer, publisher, year).</summary>
+    public static Task<List<MediaSuggestion>> SteamMatchesAsync(string query, CancellationToken ct) => Steam(query, ct);
+
     /// <summary>Video games matching the title (Wikidata), with their original platform and box art.</summary>
     public static Task<List<MediaSuggestion>> GameMatchesAsync(string query, CancellationToken ct) =>
         Wikidata(WikidataKind.Game)(query, ct);
@@ -159,7 +163,7 @@ public static class MetadataService
         MediaCategory.Manga => [AniList("MANGA"), GoogleBooks, OpenLibrary],
         MediaCategory.Book => [GoogleBooks, OpenLibrary, ITunes("ebook", "ebook", null)],
         MediaCategory.Comic => [GoogleBooks, OpenLibrary, ITunes("ebook", "ebook", null)],
-        MediaCategory.Game => [Wikidata(WikidataKind.Game)],
+        MediaCategory.Game => [Steam, Wikidata(WikidataKind.Game)],
         MediaCategory.Music => [ITunes("music", "album", "track")],
         MediaCategory.Podcast => [ITunes("podcast", "podcast", "episode")],
         MediaCategory.Audiobook => [ITunes("audiobook", "audiobook", null), GoogleBooks],
@@ -488,6 +492,66 @@ public static class MetadataService
             .GroupBy(s => s.Title, StringComparer.OrdinalIgnoreCase) // one per title (best region first)
             .Select(g => g.First())
             .ToList();
+
+    // --- Steam: modern (PC) games — store search + app details, no key needed ----------------
+
+    /// <summary>Steam store search: fast and current, covers most modern games (not retro).</summary>
+    private static async Task<List<MediaSuggestion>> Steam(string query, CancellationToken ct)
+    {
+        using var search = await GetJsonAsync(
+            $"https://store.steampowered.com/api/storesearch/?term={Uri.EscapeDataString(query)}&l=english&cc=US", ct)
+            .ConfigureAwait(false);
+        var ids = search.RootElement.GetProperty("items").EnumerateArray()
+            .Where(i => Str(i, "type") == "app")
+            .Select(i => (Id: Int(i, "id"), Name: Str(i, "name") ?? ""))
+            // Soundtracks, DLC, upgrades… aren't games of their own.
+            .Where(i => i.Id is not null && !Regex.IsMatch(i.Name,
+                @"soundtrack|\bOST\b|\bDLC\b|upgrade|season pass|\bdemo\b|artbook|expansion pass|bundle", RegexOptions.IgnoreCase))
+            .Select(i => i.Id!.Value)
+            .Distinct()
+            .Take(5)
+            .ToList();
+        var details = await Task.WhenAll(ids.Select(id => SteamAppAsync(id, ct))).ConfigureAwait(false);
+        return details.OfType<MediaSuggestion>().ToList();
+    }
+
+    private static async Task<MediaSuggestion?> SteamAppAsync(int id, CancellationToken ct)
+    {
+        try
+        {
+            using var doc = await GetJsonAsync($"https://store.steampowered.com/api/appdetails?appids={id}&l=english", ct)
+                .ConfigureAwait(false);
+            var app = doc.RootElement.GetProperty(id.ToString(CultureInfo.InvariantCulture));
+            if (!app.TryGetProperty("data", out var data) || Str(data, "type") != "game" || Str(data, "name") is not { } name)
+                return null;
+            string? First(string property) =>
+                data.TryGetProperty(property, out var list) && list.ValueKind == JsonValueKind.Array && list.GetArrayLength() > 0
+                    ? list[0].GetString() : null;
+            int? year = null;
+            if (data.TryGetProperty("release_date", out var release) && Str(release, "date") is { } date)
+            {
+                var m = Regex.Match(date, @"\b(19|20)\d{2}\b");
+                if (m.Success)
+                    year = int.Parse(m.Value, CultureInfo.InvariantCulture);
+            }
+            var credits = new List<Credit>();
+            if (First("publishers") is { } publisher)
+                credits.Add(new Credit { Role = "Publisher", Name = publisher });
+            if (data.TryGetProperty("genres", out var genres) && genres.ValueKind == JsonValueKind.Array)
+            {
+                var names = genres.EnumerateArray().Select(g => Str(g, "description")).OfType<string>().Take(3).ToList();
+                if (names.Count > 0)
+                    credits.Add(new Credit { Role = "Genre", Name = string.Join(", ", names) });
+            }
+            // Portrait "library" art (2:3 cover); the wide header image as a fallback.
+            var cover = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900.jpg";
+            return new MediaSuggestion(name, year, First("developers"), null, cover, "Steam", null, null, credits);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
 
     // --- TVmaze: TV series ------------------------------------------------------------------
 

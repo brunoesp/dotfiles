@@ -69,7 +69,7 @@ public static class ImageSearchService
         MediaCategory.Book => [OpenLibrary, ITunes("ebook", "ebook"), Wikipedia],
         MediaCategory.Manga => [AniList("MANGA"), Jikan("manga"), OpenLibrary, Wikipedia],
         MediaCategory.Comic => [OpenLibrary, Wikipedia],
-        MediaCategory.Game => [WikidataGames, Wikipedia, WikipediaWith("video game")],
+        MediaCategory.Game => [SteamCovers, WikidataGames, Wikipedia, WikipediaWith("video game")],
         MediaCategory.Music => [ITunes("music", "album"), Wikipedia],
         MediaCategory.Podcast => [ITunes("podcast", "podcast"), Wikipedia],
         MediaCategory.Audiobook => [ITunes("audiobook", "audiobook"), OpenLibrary, Wikipedia],
@@ -130,6 +130,14 @@ public static class ImageSearchService
         }
         return results.OrderBy(r => r.Index).Select(r => r.Result).ToList();
     }
+
+    // --- Steam: portrait cover art of modern games -----------------------------------------
+
+    private static async Task<List<ImageResult>> SteamCovers(string query, CancellationToken ct) =>
+        (await MetadataService.SteamMatchesAsync(query, ct).ConfigureAwait(false))
+            .Where(s => s.ImageUrl is not null)
+            .Select(s => new ImageResult(s.ImageUrl!, s.Title, "Steam"))
+            .ToList();
 
     // --- Wikidata game matches → their Wikipedia box art -------------------------------------
 
