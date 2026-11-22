@@ -1,6 +1,8 @@
 using System;
 using System.Globalization;
+using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -41,6 +43,17 @@ public partial class EntryViewModel : ViewModelBase
     public bool HasPlatform => Platform is not null;
 
     public bool HasDetailsOrPlatform => HasDetails || HasPlatform;
+
+    /// <summary>Extra credits (director, composer…) for tiles.</summary>
+    public IReadOnlyList<Credit> Credits => Model.Credits ?? [];
+
+    public bool HasCredits => Credits.Count > 0;
+
+    /// <summary>"Director: Hiroshi Yamauchi · Composer: Koji Kondo" for cards.</summary>
+    public string CreditsLine => string.Join("  ·  ", Credits.Select(c => $"{c.Role}: {c.Name}"));
+
+    /// <summary>The type-colored placeholder only shows when there's no cover image.</summary>
+    public IBrush CoverBackground => HasImage ? Brushes.Transparent : Type.Brush;
 
     /// <summary>Whether the owning list name is shown (when it differs from the list being viewed).</summary>
     public bool ShowList { get; }
@@ -98,7 +111,7 @@ public partial class EntryViewModel : ViewModelBase
 
     /// <summary>Cover image, once downloaded (or from cache).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground))]
     public partial Bitmap? Image { get; set; }
 
     public bool HasImage => Image is not null;

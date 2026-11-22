@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace MediaLog.Models;
 
@@ -19,6 +20,9 @@ public sealed class MediaEntry
 
     /// <summary>Running time, page count, number of episodes… as display text.</summary>
     public string? Length { get; set; }
+
+    /// <summary>Extra credits: director, composer, publisher, genre… (optional).</summary>
+    public List<Credit>? Credits { get; set; }
 
     /// <summary>Console / platform name (games), matching a <see cref="PlatformDef"/>.</summary>
     public string? Platform { get; set; }

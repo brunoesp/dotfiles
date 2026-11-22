@@ -306,6 +306,8 @@
                                                         <TextBlock Text="{Binding Platform.Short, FallbackValue=''}" Foreground="{Binding Platform.OnBrush, FallbackValue={x:Null}}" />
                                                     </Border>
                                                 </WrapPanel>
+                                                <TextBlock Text="{Binding CreditsLine}" Classes="subtle" FontSize="12" IsVisible="{Binding HasCredits}"
+                                                           TextTrimming="CharacterEllipsis" />
                                                 <WrapPanel ItemSpacing="6">
                                                     <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
                                                     <TextBlock Classes="subtle" Text="·" FontSize="12" />
@@ -337,13 +339,13 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:EntryViewModel">
                                     <Border Classes="card" Margin="4" ClipToBounds="True">
-                                        <Grid RowDefinitions="Auto,*">
-                                            <!-- cover: 2:3 posters / book covers, 1:1 for albums and podcasts -->
+                                        <Grid RowDefinitions="Auto,Auto,*">
+                                            <!-- cover: shaped like the image (uncropped) -->
                                             <c:AspectBox Ratio="{Binding CoverRatio}">
-                                            <Border Background="{Binding Type.Brush}" ClipToBounds="True">
+                                            <Border Background="{Binding CoverBackground}" ClipToBounds="True">
                                                 <Panel>
                                                     <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
-                                                                  Width="44" Height="44" StrokeThickness="1.8" />
+                                                                  Width="44" Height="44" StrokeThickness="1.8" IsVisible="{Binding !HasImage}" />
                                                     <!-- the cover box has the image's own shape; Uniform never crops -->
                                                     <Image Source="{Binding Image}" Stretch="Uniform" IsVisible="{Binding HasImage}" />
                                                     <!-- console badge -->
@@ -360,6 +362,8 @@
                                                 </Panel>
                                             </Border>
                                             </c:AspectBox>
+                                            <!-- type-colored line between cover and info -->
+                                            <Border Grid.Row="1" Height="3" Background="{Binding Type.Brush}" />
                                             <Border Classes="tileActions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
                                                     IsVisible="{Binding ShowActions}">
                                                 <StackPanel Orientation="Horizontal">
@@ -372,7 +376,7 @@
                                                 </StackPanel>
                                             </Border>
                                             <!-- square covers leave more room: roomier, line-per-detail layout -->
-                                            <DockPanel Grid.Row="1" Margin="12,10,12,12" IsVisible="{Binding IsSquareCover}">
+                                            <DockPanel Grid.Row="2" Margin="12,10,12,12" IsVisible="{Binding IsSquareCover}">
                                                 <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,8,0,0">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="12" />
@@ -389,9 +393,19 @@
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding YearAndLength}" Classes="subtle" FontSize="12" IsVisible="{Binding HasYearAndLength}"
                                                                TextTrimming="CharacterEllipsis" />
+                                                    <ItemsControl ItemsSource="{Binding Credits}" IsVisible="{Binding HasCredits}" Margin="0,4,0,0">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="m:Credit">
+                                                                <TextBlock FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Margin="0,1">
+                                                                    <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
+                                                                    <Run Text="{Binding Name}" />
+                                                                </TextBlock>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
                                                 </StackPanel>
                                             </DockPanel>
-                                            <DockPanel Grid.Row="1" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
+                                            <DockPanel Grid.Row="2" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
                                                 <StackPanel DockPanel.Dock="Bottom" Spacing="1" Margin="0,6,0,0">
                                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                                         <TextBlock Text="{Binding Type.Label}" Foreground="{Binding Type.Brush}" FontWeight="SemiBold" FontSize="11" />
@@ -406,6 +420,16 @@
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                    <ItemsControl ItemsSource="{Binding Credits}" IsVisible="{Binding HasCredits}" Margin="0,3,0,0">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="m:Credit">
+                                                                <TextBlock FontSize="11" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Margin="0,1">
+                                                                    <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
+                                                                    <Run Text="{Binding Name}" />
+                                                                </TextBlock>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Grid>
@@ -554,6 +578,8 @@
                                         <TextBox Grid.Column="2" Text="{Binding Length}" PlaceholderText="Length / episodes"
                                                  ToolTip.Tip="Running time, pages, episodes…" />
                                     </Grid>
+                                    <TextBox Text="{Binding CreditsText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="140"
+                                             PlaceholderText="Credits, one per line (e.g. Composer: Koji Kondo)" FontSize="13" />
                                     <Button Content="Remove image" Command="{Binding Cover.RemoveCommand}" IsVisible="{Binding Cover.HasImage}" />
                                 </StackPanel>
                             </Grid>

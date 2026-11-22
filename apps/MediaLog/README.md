@@ -21,6 +21,8 @@ documentaries, audiobooks…
   their proper name, cover and details: **year**, **creator** (director, author, studio, developer,
   artist…) and **length** (running time, episodes, pages, tracks…). Picking one fills it all in; the
   details are shown on the entry and editable in the editor (which also has a *Look up* button).
+  Games and movies also get **credits** from Wikidata (director, composer, producer, publisher,
+  designer, genre; writer and cast for movies), also filled in when a box-art match is picked.
   Sources (free, no keys) by type: Wikidata (movies, documentaries, games, other), TVmaze (series),
   AniList (anime, manga), Google Books / Open Library / iTunes (books, comics), iTunes (albums,
   podcasts, audiobooks).

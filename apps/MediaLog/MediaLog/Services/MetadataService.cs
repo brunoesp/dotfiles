@@ -18,7 +18,7 @@ namespace MediaLog.Services;
 /// <param name="Length">Running time, pages, episodes, tracks… as display text.</param>
 public sealed record MediaSuggestion(
     string Title, int? Year, string? Creator, string? Length, string? ImageUrl, string Source, string? Description = null,
-    string? Platform = null)
+    string? Platform = null, IReadOnlyList<Credit>? Credits = null)
 {
     /// <summary>"2024 · Denis Villeneuve · 2h 46m"</summary>
     public string Details => string.Join(" · ",
@@ -67,6 +67,43 @@ public static class MetadataService
                 yield return batch;
             if (total >= MaxResults)
                 yield break;
+        }
+    }
+
+    /// <summary>
+    /// Fills in what a suggestion lacks (year, creator, credits, length) from the best Wikidata
+    /// match for games and films, e.g. after picking a box-art match that only has a title.
+    /// </summary>
+    public static async Task<MediaSuggestion> EnrichAsync(MediaSuggestion suggestion, MediaTypeInfo? type, CancellationToken ct)
+    {
+        var category = MediaCategories.Of(type);
+        if (category is not (MediaCategory.Game or MediaCategory.Film)
+            || (suggestion.Year is not null && suggestion.Creator is not null && suggestion.Credits is { Count: > 0 }))
+            return suggestion;
+        try
+        {
+            var kind = category == MediaCategory.Game ? WikidataKind.Game : WikidataKind.Film;
+            var match = (await SafeAsync(Wikidata(kind), suggestion.Title, ct).ConfigureAwait(false))
+                .Select(m => (Match: m, Score: TitleMatch.Score(m.Title, suggestion.Title) + TitleMatch.Score(suggestion.Title, m.Title)))
+                .Where(m => m.Score >= 1.7)
+                .OrderByDescending(m => m.Score)
+                .Select(m => m.Match)
+                .FirstOrDefault();
+            if (match is null)
+                return suggestion;
+            return suggestion with
+            {
+                Year = suggestion.Year ?? match.Year,
+                Creator = suggestion.Creator ?? match.Creator,
+                Length = suggestion.Length ?? match.Length,
+                Credits = suggestion.Credits is { Count: > 0 } ? suggestion.Credits : match.Credits,
+                Platform = suggestion.Platform ?? match.Platform,
+                ImageUrl = suggestion.ImageUrl ?? match.ImageUrl,
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            return suggestion;
         }
     }
 
@@ -189,7 +226,17 @@ public static class MetadataService
             _ => ["P57", "P50", "P178", "P175", "P170", "P86"],
         };
 
-        var items = new List<(string Label, string? Description, int? Year, string? CreatorId, string? Length, string? Article, string? PlatformId)>();
+        // Extra credits worth showing, per kind: (property, role, how many values).
+        (string Property, string Role, int Max)[] creditProps = kind switch
+        {
+            WikidataKind.Game => [("P57", "Director", 2), ("P86", "Composer", 2), ("P162", "Producer", 1), ("P123", "Publisher", 1),
+                ("P287", "Designer", 1), ("P136", "Genre", 2)],
+            WikidataKind.Film => [("P86", "Composer", 1), ("P58", "Writer", 2), ("P161", "Starring", 3), ("P136", "Genre", 2)],
+            _ => [("P86", "Composer", 1), ("P50", "Author", 1), ("P136", "Genre", 2)],
+        };
+
+        var items = new List<(string Label, string? Description, int? Year, string? CreatorId, string? Length, string? Article,
+            string? PlatformId, List<(string Role, List<string> Ids)> Credits)>();
         foreach (var hit in hits)
         {
             if (!all.TryGetProperty(hit.Id, out var entity) || !entity.TryGetProperty("claims", out var claims))
@@ -222,19 +269,24 @@ public static class MetadataService
             if (entity.TryGetProperty("sitelinks", out var links) && links.TryGetProperty("enwiki", out var enwiki))
                 article = Str(enwiki, "title");
             var platformId = kind == WikidataKind.Game ? ItemIds(claims, "P400").FirstOrDefault() : null;
-            items.Add((label, description, year, creatorId, length, article, platformId));
+            var credits = creditProps
+                .Select(c => (c.Role, Ids: ItemIds(claims, c.Property).Where(id => id != creatorId).Take(c.Max).ToList()))
+                .Where(c => c.Ids.Count > 0)
+                .ToList();
+            items.Add((label, description, year, creatorId, length, article, platformId, credits));
         }
         if (items.Count == 0)
             return [];
 
         // Names of the directors / developers / authors…
         var names = new Dictionary<string, string>();
-        var creatorIds = items.Select(i => i.CreatorId).Concat(items.Select(i => i.PlatformId))
-            .OfType<string>().Distinct().Take(50).ToList();
-        if (creatorIds.Count > 0)
+        var labelIds = items.Select(i => i.CreatorId).Concat(items.Select(i => i.PlatformId))
+            .Concat(items.SelectMany(i => i.Credits.SelectMany(c => c.Ids)))
+            .OfType<string>().Distinct().Take(100).ToList();
+        foreach (var chunk in labelIds.Chunk(50)) // the API takes 50 ids per call
         {
             using var labels = await GetJsonAsync(
-                $"{api}&action=wbgetentities&props=labels&languages=en&ids={string.Join('|', creatorIds)}", ct).ConfigureAwait(false);
+                $"{api}&action=wbgetentities&props=labels&languages=en&ids={string.Join('|', chunk)}", ct).ConfigureAwait(false);
             foreach (var e in labels.RootElement.GetProperty("entities").EnumerateObject())
             {
                 if (e.Value.TryGetProperty("labels", out var l) && l.TryGetProperty("en", out var en) && Str(en, "value") is { } name)
@@ -248,7 +300,15 @@ public static class MetadataService
         return items.Select(i => new MediaSuggestion(
                 i.Label, i.Year, i.CreatorId is { } id ? names.GetValueOrDefault(id) : null, i.Length,
                 i.Article is { } a ? images.GetValueOrDefault(a) : null, "Wikidata", i.Description,
-                i.PlatformId is { } p ? names.GetValueOrDefault(p) : null))
+                i.PlatformId is { } p ? names.GetValueOrDefault(p) : null,
+                i.Credits
+                    .Select(c => new Credit
+                    {
+                        Role = c.Role,
+                        Name = string.Join(", ", c.Ids.Select(id => names.GetValueOrDefault(id)).OfType<string>()),
+                    })
+                    .Where(c => c.Name.Length > 0)
+                    .ToList()))
             .ToList();
     };
 

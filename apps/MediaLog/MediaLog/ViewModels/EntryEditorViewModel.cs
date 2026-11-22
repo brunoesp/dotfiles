@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaLog.Models;
@@ -30,6 +31,7 @@ public partial class EntryEditorViewModel : ViewModelBase
         Date = entry.Model.CompletedOn.ToDateTime(TimeOnly.MinValue);
         List = entry.List;
         YearText = entry.Model.Year?.ToString() ?? "";
+        CreditsText = FormatCredits(entry.Model.Credits);
         Creator = entry.Model.Creator ?? "";
         Length = entry.Model.Length ?? "";
         Cover = new CoverPickerViewModel(entry.Model.ImageUrl, entry.Image, entry.Model.Name, () => Type, () => PlatformText);
@@ -60,6 +62,24 @@ public partial class EntryEditorViewModel : ViewModelBase
     [ObservableProperty]
     public partial string YearText { get; set; }
 
+    /// <summary>One "Role: Name" per line.</summary>
+    [ObservableProperty]
+    public partial string CreditsText { get; set; }
+
+    public static string FormatCredits(IEnumerable<Credit>? credits) =>
+        credits is null ? "" : string.Join(Environment.NewLine, credits.Select(c => $"{c.Role}: {c.Name}"));
+
+    public static List<Credit>? ParseCredits(string? text)
+    {
+        var credits = (text ?? "")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.Split(':', 2, StringSplitOptions.TrimEntries))
+            .Where(parts => parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
+            .Select(parts => new Credit { Role = parts[0], Name = parts[1] })
+            .ToList();
+        return credits.Count > 0 ? credits : null;
+    }
+
     /// <summary>Director, author, developer, artist, studio…</summary>
     [ObservableProperty]
     public partial string Creator { get; set; }
@@ -71,8 +91,33 @@ public partial class EntryEditorViewModel : ViewModelBase
     [RelayCommand]
     private void LookUp() => Suggestions.SearchNow(Name);
 
-    private void ApplySuggestion(Services.MediaSuggestion suggestion, Avalonia.Media.Imaging.Bitmap? thumbnail)
+    private async void ApplySuggestion(Services.MediaSuggestion suggestion, Avalonia.Media.Imaging.Bitmap? thumbnail)
     {
+        ApplyDetails(suggestion, thumbnail);
+        // Complete missing details (credits, year…) from Wikidata.
+        var enriched = await Services.MetadataService.EnrichAsync(suggestion, Type, default);
+        if (enriched != suggestion)
+            ApplyDetails(enriched with { ImageUrl = suggestion.ImageUrl ?? enriched.ImageUrl }, null, onlyMissing: true);
+    }
+
+    private void ApplyDetails(Services.MediaSuggestion suggestion, Avalonia.Media.Imaging.Bitmap? thumbnail, bool onlyMissing = false)
+    {
+        if (suggestion.Credits is { Count: > 0 } credits && (!onlyMissing || string.IsNullOrWhiteSpace(CreditsText)))
+            CreditsText = FormatCredits(credits);
+        if (onlyMissing)
+        {
+            if (string.IsNullOrWhiteSpace(YearText) && suggestion.Year is { } y)
+                YearText = y.ToString();
+            if (string.IsNullOrWhiteSpace(Creator) && suggestion.Creator is { } c)
+                Creator = c;
+            if (string.IsNullOrWhiteSpace(Length) && suggestion.Length is { } l)
+                Length = l;
+            if (string.IsNullOrWhiteSpace(PlatformText) && suggestion.Platform is { } p)
+                PlatformText = p;
+            if (Cover.ImageUrl is null && suggestion.ImageUrl is { } u)
+                Cover.ImageUrl = u;
+            return;
+        }
         Name = suggestion.Title;
         if (suggestion.Year is { } year)
             YearText = year.ToString();

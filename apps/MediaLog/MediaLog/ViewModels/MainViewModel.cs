@@ -432,6 +432,7 @@ public partial class MainViewModel : ViewModelBase
         NewName = suggestion.Title;
         _applyingSuggestion = false;
         NewDetails = suggestion;
+        _ = EnrichNewDetailsAsync(suggestion);
         if (suggestion.Platform is { } platform && string.IsNullOrWhiteSpace(NewPlatform))
             NewPlatform = Services.Platforms.Find(_library.Platforms, platform)?.Name ?? platform;
         if (suggestion.ImageUrl is { } url)
@@ -440,6 +441,22 @@ public partial class MainViewModel : ViewModelBase
             NewCover.Image = thumbnail;
             if (thumbnail is null)
                 _ = LoadNewCoverAsync(url);
+        }
+    }
+
+    /// <summary>Completes a picked match's details (credits, year…) from Wikidata in the background.</summary>
+    private async System.Threading.Tasks.Task EnrichNewDetailsAsync(MediaSuggestion suggestion)
+    {
+        var enriched = await MetadataService.EnrichAsync(suggestion, NewType, default);
+        if (!ReferenceEquals(NewDetails, suggestion) || enriched == suggestion)
+            return;
+        NewDetails = enriched;
+        if (string.IsNullOrWhiteSpace(NewPlatform) && enriched.Platform is { } platform)
+            NewPlatform = Services.Platforms.Find(_library.Platforms, platform)?.Name ?? platform;
+        if (NewCover.ImageUrl is null && enriched.ImageUrl is { } url)
+        {
+            NewCover.ImageUrl = url;
+            _ = LoadNewCoverAsync(url);
         }
     }
 
@@ -520,6 +537,7 @@ public partial class MainViewModel : ViewModelBase
         {
             Name = NewName.Trim(), Kind = type.Id, CompletedOn = date, ImageUrl = imageUrl,
             Year = details?.Year, Creator = details?.Creator, Length = details?.Length,
+            Credits = details?.Credits is { Count: > 0 } credits ? credits.ToList() : null,
             Platform = IsNewGame ? EnsurePlatform(NewPlatform) : null,
         });
         if (imageUrl is not null)
@@ -625,6 +643,7 @@ public partial class MainViewModel : ViewModelBase
         entry.Creator = string.IsNullOrWhiteSpace(editor.Creator) ? null : editor.Creator.Trim();
         entry.Length = string.IsNullOrWhiteSpace(editor.Length) ? null : editor.Length.Trim();
         entry.Platform = editor.IsGame ? EnsurePlatform(editor.PlatformText) : null;
+        entry.Credits = EntryEditorViewModel.ParseCredits(editor.CreditsText);
         if (entry.ImageUrl is { } url)
             _ = ImageCache.SaveToDiskAsync(url);
 
