@@ -693,7 +693,8 @@ public partial class MainViewModel : ViewModelBase
         var category = Services.MediaCategories.Of(type);
         var wantsCredits = category is Services.MediaCategory.Game or Services.MediaCategory.Film;
         var wantsPlatform = category == Services.MediaCategory.Game;
-        const int currentInfoVersion = 2;
+        // 3 = with Steam for games: entries looked up before (and still missing details) are retried.
+        const int currentInfoVersion = 3;
         // Already looked up with the current lookup (even if some details weren't found), or
         // nothing missing: skip. This makes a second "Refresh all" fast.
         if (entry.InfoVersion >= currentInfoVersion
