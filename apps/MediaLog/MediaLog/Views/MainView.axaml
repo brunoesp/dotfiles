@@ -356,7 +356,7 @@
                                     <Border Classes="card entry" Margin="4" ClipToBounds="True">
                                         <Grid RowDefinitions="Auto,Auto,*">
                                             <!-- cover: shaped like the image (uncropped) -->
-                                            <c:AspectBox Ratio="{Binding CoverRatio}">
+                                            <c:AspectBox Ratio="{Binding TileCoverRatio}">
                                             <Border Background="{Binding CoverBackground}" ClipToBounds="True">
                                                 <Panel>
                                                     <c:StrokeIcon Data="{Binding Type.Icon}" Foreground="{Binding Type.OnBrush}"
@@ -403,21 +403,22 @@
                                                 </StackPanel>
                                                 <StackPanel Spacing="3">
                                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"
-                                                               TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Creator}" FontSize="14" IsVisible="{Binding HasCreator}"
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Creator}" FontSize="14" IsVisible="{Binding HasCreator}"
+                                                               TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding YearAndLength}" Classes="subtle" FontSize="12" IsVisible="{Binding HasYearAndLength}"
                                                                TextTrimming="CharacterEllipsis" />
-                                                    <ItemsControl ItemsSource="{Binding Credits}" IsVisible="{Binding HasCredits}" Margin="0,4,0,0">
+                                                    <ItemsControl ItemsSource="{Binding TileCredits}" IsVisible="{Binding HasCredits}" Margin="0,4,0,0">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate DataType="m:Credit">
-                                                                <TextBlock FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Margin="0,1">
+                                                                <TextBlock FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,1">
                                                                     <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
                                                                     <Run Text="{Binding Name}" />
                                                                 </TextBlock>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
+                                                    <TextBlock Text="{Binding MoreCreditsText}" Classes="subtle" FontSize="11" IsVisible="{Binding HasMoreCredits}" />
                                                 </StackPanel>
                                             </DockPanel>
                                             <DockPanel Grid.Row="2" Margin="10,8,10,10" IsVisible="{Binding !IsSquareCover}">
@@ -435,16 +436,17 @@
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding Details}" FontSize="11" IsVisible="{Binding HasDetails}"
                                                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                    <ItemsControl ItemsSource="{Binding Credits}" IsVisible="{Binding HasCredits}" Margin="0,3,0,0">
+                                                    <ItemsControl ItemsSource="{Binding TileCredits}" IsVisible="{Binding HasCredits}" Margin="0,3,0,0">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate DataType="m:Credit">
-                                                                <TextBlock FontSize="11" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Margin="0,1">
+                                                                <TextBlock FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,1">
                                                                     <Run Text="{Binding Role}" Foreground="{DynamicResource SubtleText}" />
                                                                     <Run Text="{Binding Name}" />
                                                                 </TextBlock>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
+                                                    <TextBlock Text="{Binding MoreCreditsText}" Classes="subtle" FontSize="11" IsVisible="{Binding HasMoreCredits}" />
                                                 </StackPanel>
                                             </DockPanel>
                                         </Grid>

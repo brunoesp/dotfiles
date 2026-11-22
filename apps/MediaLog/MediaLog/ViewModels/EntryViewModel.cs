@@ -53,6 +53,18 @@ public partial class EntryViewModel : ViewModelBase
 
     public bool HasCredits => Credits.Count > 0;
 
+    /// <summary>Tiles show only a few credits (all of them are in the details card).</summary>
+    public const int TileCreditLimit = 3;
+
+    public IReadOnlyList<Credit> TileCredits => Credits.Take(TileCreditLimit).ToList();
+
+    public bool HasMoreCredits => Credits.Count > TileCreditLimit;
+
+    public string MoreCreditsText => $"+{Credits.Count - TileCreditLimit} more…";
+
+    /// <summary>Tile cover shape, capped so a tall cover can't make a whole row of tiles huge.</summary>
+    public double TileCoverRatio => Math.Min(CoverRatio, 1.45);
+
     /// <summary>"Director: Hiroshi Yamauchi · Composer: Koji Kondo" for cards.</summary>
     public string CreditsLine => string.Join("  ·  ", Credits.Select(c => $"{c.Role}: {c.Name}"));
 
@@ -156,7 +168,7 @@ public partial class EntryViewModel : ViewModelBase
 
     /// <summary>Cover image, once downloaded (or from cache).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground), nameof(TileCoverBackground), nameof(ThumbWidth))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(IsSquareCover), nameof(CoverRatio), nameof(CoverBackground), nameof(TileCoverBackground), nameof(ThumbWidth), nameof(TileCoverRatio))]
     public partial Bitmap? Image { get; set; }
 
     public bool HasImage => Image is not null;
