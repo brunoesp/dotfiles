@@ -97,6 +97,19 @@ public sealed class LibraryStore
         return new Library();
     }
 
+    /// <summary>Parses a library file (e.g. one exported elsewhere, to import); <c>null</c> if invalid.</summary>
+    public static Library? Parse(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(json, LibraryJsonContext.Default.Library);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public void Save(Library library) =>
         _storage.Write(JsonSerializer.Serialize(library, LibraryJsonContext.Default.Library));
 }

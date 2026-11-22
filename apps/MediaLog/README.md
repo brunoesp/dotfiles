@@ -65,6 +65,9 @@ documentaries, audiobooks…
   Tap / click outside the card to close it.
 
   ![details](docs/details.png)
+- **Import…** (sidebar) – merges a MediaLog library file (.json): new types and consoles are added,
+  entries go to their year (by date) or to the custom list of the same name, and entries already
+  present are skipped, so importing twice is harmless.
 - **Refresh all info** (sidebar) – looks every entry up online again and fills in what's missing
   (year, creator, length, credits, console, cover) without changing anything already filled in;
   shows progress and can be stopped. Wikimedia requests are throttled and cached, and a refresh

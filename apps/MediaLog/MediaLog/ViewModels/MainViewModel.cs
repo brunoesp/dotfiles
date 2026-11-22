@@ -754,6 +754,81 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // ==========================================================================
+    // Import
+    // ==========================================================================
+
+    /// <summary>
+    /// Merges a MediaLog library file into this one: its types and consoles are added when new,
+    /// year lists are filled by date, other lists by name; entries already present (same title,
+    /// type and date) are skipped. Returns a short summary.
+    /// </summary>
+    public string ImportLibrary(string json)
+    {
+        if (LibraryStore.Parse(json) is not { } incoming)
+            return "That file isn't a MediaLog library.";
+
+        foreach (var type in incoming.Types.Where(t => _library.Types.All(x => x.Id != t.Id)))
+            _library.Types.Add(type);
+        RebuildTypes();
+        foreach (var platform in incoming.Platforms.Where(p => Services.Platforms.Find(_library.Platforms, p.Name) is null))
+            _library.Platforms.Add(platform);
+        RebuildPlatforms();
+
+        int added = 0, skipped = 0;
+        foreach (var list in incoming.Lists)
+        {
+            foreach (var entry in list.Entries)
+            {
+                // Year lists hold entries by date; custom lists are matched by name.
+                ListViewModel target;
+                if (list.Year is not null)
+                {
+                    target = EnsureYearList(entry.CompletedOn.Year);
+                }
+                else
+                {
+                    target = UserLists.FirstOrDefault(l => !l.IsYearList
+                                 && string.Equals(l.Model!.Name, list.Name, StringComparison.OrdinalIgnoreCase))
+                             ?? AddListViewModel(AddCustomList(list.Name));
+                }
+                if (entry.Platform is { } platform)
+                    entry.Platform = EnsurePlatform(platform);
+                // Same title, type, date and console = already there (the same game on two consoles is two entries).
+                var exists = AllEntries().Any(x => x.Entry.Kind == entry.Kind && x.Entry.CompletedOn == entry.CompletedOn
+                    && string.Equals(x.Entry.Name, entry.Name, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(x.Entry.Platform, entry.Platform, StringComparison.OrdinalIgnoreCase));
+                if (exists)
+                {
+                    skipped++;
+                    continue;
+                }
+                entry.Id = Guid.NewGuid();
+                target.Model!.Entries.Add(entry);
+                added++;
+            }
+        }
+        Persist();
+        Refresh();
+        return skipped == 0
+            ? $"Imported {added} entries."
+            : $"Imported {added} entries ({skipped} already there).";
+    }
+
+    private MediaList AddCustomList(string name)
+    {
+        var list = new MediaList { Name = name };
+        _library.Lists.Add(list);
+        return list;
+    }
+
+    /// <summary>Shows a message in the bottom status bar (shared with Refresh all info).</summary>
+    public void ShowStatus(string message)
+    {
+        RefreshProgress = 0;
+        RefreshStatus = message;
+    }
+
+    // ==========================================================================
     // Details card (press and hold an entry)
     // ==========================================================================
 

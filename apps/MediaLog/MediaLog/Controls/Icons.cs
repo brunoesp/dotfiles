@@ -21,6 +21,7 @@ public static class Icons
     public static Geometry ViewCompact { get; } = Geometry.Parse("M3 5h18 M3 9.67h18 M3 14.33h18 M3 19h18");
     public static Geometry Image { get; } = Geometry.Parse("M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M9 7.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z M21 15l-5-5L5 21");
     public static Geometry Refresh { get; } = Geometry.Parse("M21 12a9 9 0 1 1-2.64-6.36L21 8 M21 3v5h-5");
+    public static Geometry Import { get; } = Geometry.Parse("M12 3v12 M7 10l5 5 5-5 M5 21h14");
     public static Geometry Search { get; } = Geometry.Parse("M11 3a8 8 0 1 1 0 16 8 8 0 0 1 0-16z M21 21l-4.3-4.3");
     public static Geometry Close { get; } = Geometry.Parse("M18 6L6 18 M6 6l12 12");
     public static Geometry Check { get; } = Geometry.Parse("M20 6L9 17l-5-5");

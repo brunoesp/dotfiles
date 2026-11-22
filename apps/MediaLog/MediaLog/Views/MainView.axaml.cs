@@ -21,6 +21,7 @@ public partial class MainView : UserControl
         AddHandler(PointerMovedEvent, OnEntryMoved, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnEntryReleased, handledEventsToo: true);
         AddHandler(PointerCaptureLostEvent, (_, _) => CancelHold(), handledEventsToo: true);
+        ImportButton.Click += async (_, _) => await ImportAsync();
         DetailsBackdrop.PointerPressed += (_, e) =>
         {
             if (DataContext is MainViewModel vm)
@@ -67,6 +68,34 @@ public partial class MainView : UserControl
     }
 
     private void CancelHold() => _tapEntry = null;
+
+    private async System.Threading.Tasks.Task ImportAsync()
+    {
+        if (DataContext is not MainViewModel vm || TopLevel.GetTopLevel(this) is not { } top)
+            return;
+        var files = await top.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+        {
+            Title = "Import a MediaLog library",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new Avalonia.Platform.Storage.FilePickerFileType("MediaLog library") { Patterns = ["*.json"], MimeTypes = ["application/json"] },
+                Avalonia.Platform.Storage.FilePickerFileTypes.All,
+            ],
+        });
+        if (files.Count == 0)
+            return;
+        try
+        {
+            await using var stream = await files[0].OpenReadAsync();
+            using var reader = new System.IO.StreamReader(stream);
+            vm.ShowStatus(vm.ImportLibrary(await reader.ReadToEndAsync()));
+        }
+        catch (System.Exception ex)
+        {
+            vm.ShowStatus("Couldn't read that file: " + ex.Message);
+        }
+    }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
